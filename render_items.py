@@ -1188,6 +1188,8 @@ def main():
                         help="Render only first N items for testing")
     parser.add_argument("--section", type=int, default=None,
                         help="Render only items from this section number")
+    parser.add_argument("--index", type=int, default=None,
+                        help="Render only item with this index (requires --section)")
     cli_args = parser.parse_args()
 
     # Load ItemTRSData.bmd for per-item rotation/scale
@@ -1205,6 +1207,8 @@ def main():
         if cli_args.section is not None and sec_idx != cli_args.section:
             continue
         for item in section.findall("Item"):
+            if cli_args.index is not None and int(item.get("Index")) != cli_args.index:
+                continue
             model_file = item.get("ModelFile", "")
             if not model_file:
                 continue
