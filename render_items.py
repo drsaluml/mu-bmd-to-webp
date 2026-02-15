@@ -999,15 +999,6 @@ def render_bmd(meshes: list[dict], size: int = RENDER_SIZE,
             max_node = max(max_node, int(np.max(ns)))
     print(f"    use_bones={use_bones} bones_count={bones_count} max_bone_idx={max_node} source={trs_entry.get('_source') if trs_entry else 'N/A'}")
     if use_bones:
-        # Debug: print bone world matrices
-        if bones:
-            worlds = _build_bone_world_matrices(bones)
-            for bi, w in enumerate(worlds):
-                b = bones[bi]
-                print(f"    bone[{bi}] parent={b['parent']} dummy={b['is_dummy']}")
-                print(f"      pos={b['bind_position']}")
-                print(f"      rot={b['bind_rotation']}")
-                print(f"      world:\n{w[:3]}")
         _apply_bone_transforms(meshes, bones)
 
     # Debug: bounding box after bone transforms
@@ -1020,16 +1011,6 @@ def render_bmd(meshes: list[dict], size: int = RENDER_SIZE,
             print(f"    mesh[{i}] bbox: X={span[0]:.1f} Y={span[1]:.1f} Z={span[2]:.1f}  (bones={'ON' if use_bones else 'OFF'})")
 
     R, body_meshes = _compute_view_matrix(meshes, trs_entry)
-
-    # Debug: screen-space bbox per mesh after view transform
-    for i, m in enumerate(body_meshes):
-        v = m['verts']
-        if len(v) > 0:
-            vt = (R @ v.T).T
-            mn = vt.min(axis=0)
-            mx = vt.max(axis=0)
-            span = mx - mn
-            print(f"    mesh[{i}] screen: X={span[0]:.1f} Y={span[1]:.1f} Z={span[2]:.1f}")
 
     all_verts = np.vstack([m["verts"] for m in body_meshes if len(m["verts"]) > 0])
     if len(all_verts) == 0:
@@ -1122,9 +1103,6 @@ def render_bmd(meshes: list[dict], size: int = RENDER_SIZE,
         arr2[:, :, :3] = np.where(mask, arr2[:, :, :3] / np.maximum(alpha2, 0.004), 0)
         img = Image.fromarray(np.clip(arr2, 0, 255).astype(np.uint8), "RGBA")
     img = _remove_small_clusters(img)
-    # Debug: save raw render before standardization
-    img.save("/tmp/raw_render_debug.webp", "WebP", quality=90)
-    print(f"    [debug] raw render saved to /tmp/raw_render_debug.webp")
     if standardize:
         display_angle = trs_entry.get('display_angle', -45.0) if trs_entry else -45.0
         force_flip = bool(trs_entry.get('flip', False)) if trs_entry else False

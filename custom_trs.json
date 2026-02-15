@@ -6,6 +6,7 @@
   "items": {
     "19_17": { "rotX": 0, "rotY": 0, "rotZ": 0, "scale": 0.0020 },
     "1_0": { "rotX": 0, "rotY": 18, "rotZ": 140, "scale": 0.0025, "bones": false },
+    "1_3": { "rotX": 180, "rotY": 18, "rotZ": 0, "scale": 0.0025, "bones": false },
     "1_4": { "rotX": -5, "rotY": 40, "rotZ": 40, "scale": 0.0025, "camera": "noflip", "perspective": true, "fov": 45 },
     "1_8": { "rotX": -90, "rotY": 50, "rotZ": 0, "scale": 0.0025, "display_angle": -60, "fill_ratio": 0.70, "camera": "noflip" }
   }
