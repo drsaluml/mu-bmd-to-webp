@@ -311,8 +311,11 @@ def _build_texture_index():
         for f in search_dir.iterdir():
             if f.suffix.lower() in (".ozj", ".ozt"):
                 key = f.stem.lower()
-                # Prefer files in main texture/ dir (don't overwrite)
+                ext = f.suffix.lower()
                 if key not in _tex_index:
+                    _tex_index[key] = str(f)
+                elif ext == ".ozt" and Path(_tex_index[key]).suffix.lower() == ".ozj":
+                    # Prefer OZT (TGA with alpha) over OZJ (JPEG, no alpha)
                     _tex_index[key] = str(f)
 
 
@@ -586,7 +589,7 @@ def _make_trs_entry(obj: dict) -> dict:
         'scale': obj.get('scale', 0.0),
         '_source': 'custom',
     }
-    for key in ('bones', 'display_angle', 'flip', 'fill_ratio', 'camera'):
+    for key in ('bones', 'display_angle', 'flip', 'fill_ratio', 'camera', 'perspective', 'fov'):
         if key in obj:
             entry[key] = obj[key]
     return entry
@@ -690,6 +693,12 @@ def _compute_view_matrix(meshes: list[dict], trs_entry: dict | None = None) -> t
     If trs_entry is provided, uses per-item TRS rotation (preferred).
     Otherwise falls back to the default view.
     """
+    # Debug: show all meshes and which are filtered
+    for i, m in enumerate(meshes):
+        nv, nt = len(m['verts']), len(m['tris'])
+        tex = Path(m['tex_path'].replace('\\', '/')).stem if m.get('tex_path') else '?'
+        is_eff = _is_effect_mesh(m)
+        print(f"    mesh[{i}] verts={nv} tris={nt} tex={tex} {'FILTERED' if is_eff else 'KEEP'}")
     body = [m for m in meshes if not _is_effect_mesh(m)]
     if not body:
         body = meshes
@@ -982,9 +991,45 @@ def render_bmd(meshes: list[dict], size: int = RENDER_SIZE,
     use_bones = trs_entry is None or trs_entry.get('_source') != 'binary'
     if trs_entry and trs_entry.get('bones') is False:
         use_bones = False
+    bones_count = len(bones) if bones else 0
+    max_node = -1
+    for m in meshes:
+        ns = m.get('nodes')
+        if ns is not None and len(ns) > 0:
+            max_node = max(max_node, int(np.max(ns)))
+    print(f"    use_bones={use_bones} bones_count={bones_count} max_bone_idx={max_node} source={trs_entry.get('_source') if trs_entry else 'N/A'}")
     if use_bones:
+        # Debug: print bone world matrices
+        if bones:
+            worlds = _build_bone_world_matrices(bones)
+            for bi, w in enumerate(worlds):
+                b = bones[bi]
+                print(f"    bone[{bi}] parent={b['parent']} dummy={b['is_dummy']}")
+                print(f"      pos={b['bind_position']}")
+                print(f"      rot={b['bind_rotation']}")
+                print(f"      world:\n{w[:3]}")
         _apply_bone_transforms(meshes, bones)
+
+    # Debug: bounding box after bone transforms
+    for i, m in enumerate(meshes):
+        v = m['verts']
+        if len(v) > 0:
+            mn = v.min(axis=0)
+            mx = v.max(axis=0)
+            span = mx - mn
+            print(f"    mesh[{i}] bbox: X={span[0]:.1f} Y={span[1]:.1f} Z={span[2]:.1f}  (bones={'ON' if use_bones else 'OFF'})")
+
     R, body_meshes = _compute_view_matrix(meshes, trs_entry)
+
+    # Debug: screen-space bbox per mesh after view transform
+    for i, m in enumerate(body_meshes):
+        v = m['verts']
+        if len(v) > 0:
+            vt = (R @ v.T).T
+            mn = vt.min(axis=0)
+            mx = vt.max(axis=0)
+            span = mx - mn
+            print(f"    mesh[{i}] screen: X={span[0]:.1f} Y={span[1]:.1f} Z={span[2]:.1f}")
 
     all_verts = np.vstack([m["verts"] for m in body_meshes if len(m["verts"]) > 0])
     if len(all_verts) == 0:
@@ -993,6 +1038,25 @@ def render_bmd(meshes: list[dict], size: int = RENDER_SIZE,
     render_size = size * supersample
 
     all_transformed = (R @ all_verts.T).T
+
+    # Perspective projection (per-item opt-in)
+    use_persp = bool(trs_entry.get('perspective', False)) if trs_entry else False
+    persp_cam_dist = 0.0
+    persp_z_center = 0.0
+    if use_persp:
+        fov = trs_entry.get('fov', 75.0) if trs_entry else 75.0
+        half_fov = math.radians(fov / 2)
+        z_mn, z_mx = float(all_transformed[:, 2].min()), float(all_transformed[:, 2].max())
+        persp_z_center = (z_mn + z_mx) / 2
+        xy_half = max((all_transformed[:, :2].max(axis=0) - all_transformed[:, :2].min(axis=0)).max() / 2, 0.001)
+        persp_cam_dist = xy_half / math.tan(half_fov)
+        # Apply: closer to camera (higher z) appears larger
+        z_off = all_transformed[:, 2] - persp_z_center
+        depth = np.maximum(persp_cam_dist - z_off, 0.1)
+        factor = persp_cam_dist / depth
+        all_transformed[:, 0] *= factor
+        all_transformed[:, 1] *= factor
+
     mn = all_transformed.min(axis=0)
     mx = all_transformed.max(axis=0)
     center = (mn + mx) / 2
@@ -1014,6 +1078,13 @@ def render_bmd(meshes: list[dict], size: int = RENDER_SIZE,
             continue
 
         verts_t = (R @ verts.T).T
+        if use_persp:
+            z_off = verts_t[:, 2] - persp_z_center
+            depth = np.maximum(persp_cam_dist - z_off, 0.1)
+            factor = persp_cam_dist / depth
+            verts_t = verts_t.copy()
+            verts_t[:, 0] *= factor
+            verts_t[:, 1] *= factor
         px = ((verts_t[:, 0] - center[0]) * scale + render_size / 2).astype(np.float64)
         py = (-(verts_t[:, 1] - center[1]) * scale + render_size / 2).astype(np.float64)
         pz = verts_t[:, 2].astype(np.float64)
@@ -1051,6 +1122,9 @@ def render_bmd(meshes: list[dict], size: int = RENDER_SIZE,
         arr2[:, :, :3] = np.where(mask, arr2[:, :, :3] / np.maximum(alpha2, 0.004), 0)
         img = Image.fromarray(np.clip(arr2, 0, 255).astype(np.uint8), "RGBA")
     img = _remove_small_clusters(img)
+    # Debug: save raw render before standardization
+    img.save("/tmp/raw_render_debug.webp", "WebP", quality=90)
+    print(f"    [debug] raw render saved to /tmp/raw_render_debug.webp")
     if standardize:
         display_angle = trs_entry.get('display_angle', -45.0) if trs_entry else -45.0
         force_flip = bool(trs_entry.get('flip', False)) if trs_entry else False
@@ -1132,7 +1206,6 @@ def _rasterize_triangle(
             z = w0 * z0 + w1 * z1 + w2 * z2
             if z <= z_buf[sy, sx]:
                 continue
-            z_buf[sy, sx] = z
 
             if has_uv:
                 u = w0 * u0 + w1 * u1 + w2 * u2
@@ -1140,6 +1213,11 @@ def _rasterize_triangle(
                 r, g, b, a = _sample_texture(tex, u, v)
             else:
                 r, g, b, a = default_color
+
+            # Skip fully transparent texels (don't write z-buffer)
+            if a < 8:
+                continue
+            z_buf[sy, sx] = z
 
             # sRGB decode → linear space for correct shading
             lr = (r / 255.0) ** _SRGB_GAMMA
@@ -1187,6 +1265,8 @@ def process_item(args: tuple) -> tuple[str, bool, str]:
         img.save(output_path, "WEBP", quality=WEBP_QUALITY)
         return name, True, ""
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return name, False, str(e)
 
 
