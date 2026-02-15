@@ -586,7 +586,7 @@ def _make_trs_entry(obj: dict) -> dict:
         'scale': obj.get('scale', 0.0),
         '_source': 'custom',
     }
-    for key in ('bones', 'display_angle', 'flip', 'fill_ratio'):
+    for key in ('bones', 'display_angle', 'flip', 'fill_ratio', 'camera'):
         if key in obj:
             entry[key] = obj[key]
     return entry
@@ -669,6 +669,13 @@ def _trs_view_matrix(trs_entry: dict) -> np.ndarray:
     ry = math.radians(trs_entry['rotY'])
     rz = math.radians(trs_entry['rotZ'])
     trs_rot = _Rz(rz) @ _Ry(ry) @ _Rx(rx)
+
+    # Allow custom TRS to force camera path: "camera": "noflip" or "correction"
+    cam = trs_entry.get('camera')
+    if cam == 'noflip':
+        return _NOFLIP_CAM @ trs_rot
+    elif cam == 'correction':
+        return _TRS_CORRECTION @ trs_rot
 
     rotY = trs_entry['rotY']
     if _angle_dist(rotY, 270) <= 45 or _angle_dist(rotY, 90) <= 45:
@@ -784,6 +791,8 @@ def _standardize_item_image(img: Image.Image, size: int = RENDER_SIZE,
         pil_angle -= 180
     while pil_angle < -90:
         pil_angle += 180
+
+    print(f"  [standardize] PCA_angle={current_angle:.1f}° target_math={target_angle_deg}° target_img={target_img:.1f}° pil_rotate={pil_angle:.1f}° flip={force_flip}")
 
     rotated = img.rotate(pil_angle, resample=Image.BICUBIC, expand=True,
                           fillcolor=(0, 0, 0, 0))
