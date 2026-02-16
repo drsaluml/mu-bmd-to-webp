@@ -12,8 +12,11 @@ import (
 var gradientEffectRE = regexp.MustCompile(`^(?:mini_|hangul)?gra(?:\d|_|$)`)
 
 var effectPatterns = []string{
-	"glow", "flare", "light", "chrome", "effect",
+	"glow", "flare", "chrome", "effect",
 	"aura", "shiny", "spark", "fire", "blur",
+	"lightning", "elec_light", "arrowlight", "lighting_mega",
+	"lightmarks", "light_blue", "light_red",
+	"flame", "energy", "plasma", "shine", "halo", "trail",
 	"gradation",
 }
 

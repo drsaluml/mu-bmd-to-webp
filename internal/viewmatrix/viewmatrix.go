@@ -59,6 +59,14 @@ func ComputeViewMatrix(meshes []bmd.Mesh, entry *trs.Entry) (mathutil.Mat3, []bm
 		bodyMeshes = append(bodyMeshes, filtered)
 	}
 
+	// Fallback: if all meshes were filtered, use them all
+	if len(bodyMeshes) == 0 {
+		for i := range meshes {
+			filtered := filter.FilterComponents(&meshes[i], 6)
+			bodyMeshes = append(bodyMeshes, filtered)
+		}
+	}
+
 	if len(bodyMeshes) == 0 {
 		return mathutil.Mat3Identity(), nil
 	}
