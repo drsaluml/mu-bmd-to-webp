@@ -55,31 +55,29 @@ func StandardizeImage(img *image.NRGBA, size int, targetAngleDeg, fillRatio floa
 	// Eigendecomposition of 2×2 symmetric matrix
 	_, _, evec1, _ := mathutil.Eigen2x2Sym(covXX, covXY, covYY)
 
-	// Current PCA angle in math convention (atan2(y, x))
-	// Note: image Y is flipped (down = positive)
-	pcaAngle := math.Atan2(evec1[1], evec1[0]) * 180.0 / math.Pi
+	// Current PCA angle in image coordinates (atan2(y, x), y-down)
+	currentAngle := math.Atan2(evec1[1], evec1[0]) * 180.0 / math.Pi
 
-	// Target angle in image space: math convention → PIL convention
-	// PIL rotates CCW, image Y is flipped → negate
+	// Target angle in image space: negate math convention (y-up → y-down)
 	targetImg := -targetAngleDeg
-	currentImg := -pcaAngle
 
-	// Rotation needed (PIL convention: positive = CCW)
-	pilRotate := targetImg - currentImg
-	// Normalize to [-180, 180]
-	for pilRotate > 180 {
-		pilRotate -= 360
+	// Rotation needed: PIL rotate(θ) rotates CCW, new_angle = old_angle - θ
+	// So θ = old_angle - target_angle
+	pilRotate := currentAngle - targetImg
+	// Normalize to [-90, 90] — PCA eigenvector has 180° ambiguity
+	for pilRotate > 90 {
+		pilRotate -= 180
 	}
-	for pilRotate < -180 {
-		pilRotate += 360
+	for pilRotate < -90 {
+		pilRotate += 180
 	}
 
 	// Rotate image
 	rotated := rotateImage(img, pilRotate)
 
-	// Auto-detect orientation: project pixels onto principal axis
-	// Check which half has more perpendicular spread (wider = blade/head → top-left)
-	needFlip := detectFlip(xs, ys, meanX, meanY, evec1, targetAngleDeg)
+	// Auto-detect orientation on the rotated image:
+	// Project rotated pixels along target direction, check which half is wider
+	needFlip := detectFlipRotated(rotated, targetImg)
 	if forceFlip {
 		needFlip = !needFlip
 	}
@@ -94,36 +92,97 @@ func StandardizeImage(img *image.NRGBA, size int, targetAngleDeg, fillRatio floa
 	return scaleAndCenter(cropped, size, fillRatio)
 }
 
-func detectFlip(xs, ys []float64, meanX, meanY float64, evec [2]float64, targetAngle float64) bool {
-	// Project pixels onto principal axis
-	var posSpread, negSpread float64
-	var posCount, negCount int
-	perpX, perpY := -evec[1], evec[0]
+// detectFlipRotated checks orientation on the already-rotated image.
+// Projects pixels along the target angle direction and compares
+// perpendicular spread of top-left vs bottom-right halves.
+// Matches Python's approach: std-based spread comparison on rotated pixels.
+func detectFlipRotated(rotated *image.NRGBA, targetImgDeg float64) bool {
+	b := rotated.Bounds()
+	w, h := b.Dx(), b.Dy()
 
-	for i := range xs {
-		dx := xs[i] - meanX
-		dy := ys[i] - meanY
-		proj := dx*evec[0] + dy*evec[1]
-		perp := math.Abs(dx*perpX + dy*perpY)
-
-		if proj > 0 {
-			posSpread += perp
-			posCount++
-		} else {
-			negSpread += perp
-			negCount++
+	// Collect non-transparent pixel coordinates
+	var rxs, rys []float64
+	var minX, maxX, minY, maxY float64
+	first := true
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			if rotated.Pix[y*rotated.Stride+x*4+3] > 0 {
+				fx, fy := float64(x), float64(y)
+				rxs = append(rxs, fx)
+				rys = append(rys, fy)
+				if first {
+					minX, maxX = fx, fx
+					minY, maxY = fy, fy
+				}
+				if fx < minX {
+					minX = fx
+				}
+				if fx > maxX {
+					maxX = fx
+				}
+				if fy < minY {
+					minY = fy
+				}
+				if fy > maxY {
+					maxY = fy
+				}
+				first = false
+			}
 		}
 	}
 
-	if posCount > 0 {
-		posSpread /= float64(posCount)
-	}
-	if negCount > 0 {
-		negSpread /= float64(negCount)
+	if len(rxs) < 20 {
+		return false
 	}
 
-	// Wider end should be at top-left
-	return posSpread > negSpread*1.1
+	// Center of bounding box
+	cx := (minX + maxX) / 2.0
+	cy := (minY + maxY) / 2.0
+
+	// Target direction vector in image space
+	rad := targetImgDeg * math.Pi / 180.0
+	diagX := math.Cos(rad)
+	diagY := math.Sin(rad)
+
+	// Project pixels along target direction, compute perpendicular spread per half
+	// neg_half = top-left (proj < 0), pos_half = bottom-right (proj >= 0)
+	var negPerps, posPerps []float64
+	for i := range rxs {
+		dx := rxs[i] - cx
+		dy := rys[i] - cy
+		proj := dx*diagX + dy*diagY
+		perp := -dx*diagY + dy*diagX
+
+		if proj < 0 {
+			negPerps = append(negPerps, perp)
+		} else {
+			posPerps = append(posPerps, perp)
+		}
+	}
+
+	spreadTL := stddev(negPerps)
+	spreadBR := stddev(posPerps)
+
+	// Wider end should be at top-left; flip if bottom-right is wider
+	return spreadBR > spreadTL*1.2
+}
+
+func stddev(vals []float64) float64 {
+	if len(vals) < 10 {
+		return 0
+	}
+	n := float64(len(vals))
+	var sum, sum2 float64
+	for _, v := range vals {
+		sum += v
+		sum2 += v * v
+	}
+	mean := sum / n
+	variance := sum2/n - mean*mean
+	if variance < 0 {
+		variance = 0
+	}
+	return math.Sqrt(variance)
 }
 
 func rotateImage(img *image.NRGBA, angleDeg float64) *image.NRGBA {

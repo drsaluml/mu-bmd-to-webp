@@ -4,13 +4,12 @@ import (
 	"bytes"
 	"fmt"
 	"image"
-	"image/color"
 	"image/draw"
-	_ "image/jpeg"
+	"image/jpeg"
 	"os"
 	"strings"
 
-	_ "github.com/ftrvxmtrx/tga"
+	"github.com/ftrvxmtrx/tga"
 )
 
 // LoadTexture reads an OZJ or OZT file and returns an NRGBA image.
@@ -21,7 +20,7 @@ func LoadTexture(path string) (*image.NRGBA, error) {
 	}
 
 	ext := strings.ToLower(path[len(path)-4:])
-	var imgData []byte
+	var img image.Image
 
 	switch ext {
 	case ".ozj":
@@ -29,20 +28,23 @@ func LoadTexture(path string) (*image.NRGBA, error) {
 		if len(raw) <= 24 {
 			return nil, fmt.Errorf("texture: OZJ too short: %s", path)
 		}
-		imgData = raw[24:]
+		var err error
+		img, err = jpeg.Decode(bytes.NewReader(raw[24:]))
+		if err != nil {
+			return nil, fmt.Errorf("texture: decode OZJ %s: %w", path, err)
+		}
 	case ".ozt":
 		// OZT: 4-byte header + TGA data
 		if len(raw) <= 4 {
 			return nil, fmt.Errorf("texture: OZT too short: %s", path)
 		}
-		imgData = raw[4:]
+		var err error
+		img, err = tga.Decode(bytes.NewReader(raw[4:]))
+		if err != nil {
+			return nil, fmt.Errorf("texture: decode OZT %s: %w", path, err)
+		}
 	default:
 		return nil, fmt.Errorf("texture: unknown extension: %s", ext)
-	}
-
-	img, _, err := image.Decode(bytes.NewReader(imgData))
-	if err != nil {
-		return nil, fmt.Errorf("texture: decode %s: %w", path, err)
 	}
 
 	return toNRGBA(img), nil
@@ -55,31 +57,12 @@ func toNRGBA(src image.Image) *image.NRGBA {
 	}
 	b := src.Bounds()
 	dst := image.NewNRGBA(b)
-	// Check if source has alpha
+	draw.Draw(dst, b, src, b.Min, draw.Src)
+	// Ensure alpha=255 for opaque formats (JPEG/YCbCr/Gray)
 	switch src.(type) {
 	case *image.YCbCr, *image.Gray:
-		// No alpha — draw and set alpha to 255
-		draw.Draw(dst, b, src, b.Min, draw.Src)
-		for y := b.Min.Y; y < b.Max.Y; y++ {
-			for x := b.Min.X; x < b.Max.X; x++ {
-				i := dst.PixOffset(x, y)
-				dst.Pix[i+3] = 255
-			}
-		}
-	default:
-		for y := b.Min.Y; y < b.Max.Y; y++ {
-			for x := b.Min.X; x < b.Max.X; x++ {
-				c := src.At(x, y)
-				r, g, b_, a := color.NRGBAModel.Convert(c).(color.NRGBA).R,
-					color.NRGBAModel.Convert(c).(color.NRGBA).G,
-					color.NRGBAModel.Convert(c).(color.NRGBA).B,
-					color.NRGBAModel.Convert(c).(color.NRGBA).A
-				i := dst.PixOffset(x, y)
-				dst.Pix[i] = r
-				dst.Pix[i+1] = g
-				dst.Pix[i+2] = b_
-				dst.Pix[i+3] = a
-			}
+		for i := 3; i < len(dst.Pix); i += 4 {
+			dst.Pix[i] = 255
 		}
 	}
 	return dst
