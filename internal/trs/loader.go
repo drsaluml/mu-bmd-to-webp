@@ -67,6 +67,7 @@ type customTRSEntry struct {
 	Scale        *float64 `json:"scale"`
 	Bones        *bool    `json:"bones"`
 	Override     *bool    `json:"override"`
+	Standardize  *bool    `json:"standardize"`
 	DisplayAngle *float64 `json:"display_angle"`
 	FillRatio    *float64 `json:"fill_ratio"`
 	Flip         *bool    `json:"flip"`
@@ -96,6 +97,9 @@ func makeEntry(c customTRSEntry) *Entry {
 	}
 	if c.Bones != nil {
 		e.UseBones = c.Bones
+	}
+	if c.Standardize != nil {
+		e.Standardize = c.Standardize
 	}
 	if c.DisplayAngle != nil {
 		e.DisplayAngle = *c.DisplayAngle

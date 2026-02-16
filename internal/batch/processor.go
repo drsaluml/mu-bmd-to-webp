@@ -137,15 +137,27 @@ func processItem(cfg Config, item itemlist.ItemDef) Result {
 	img = postprocess.RemoveSmallClusters(img, 0.02)
 
 	// Standardize (PCA rotation + scale + center)
-	displayAngle := trs.DefaultDisplayAngle
-	fillRatio := trs.DefaultFillRatio
-	forceFlip := false
-	if entry != nil {
-		displayAngle = entry.DisplayAngle
-		fillRatio = entry.FillRatio
-		forceFlip = entry.Flip
+	doStandardize := true
+	if entry != nil && entry.Standardize != nil && !*entry.Standardize {
+		doStandardize = false
 	}
-	img = postprocess.StandardizeImage(img, cfg.RenderSize, displayAngle, fillRatio, forceFlip)
+	if doStandardize {
+		displayAngle := trs.DefaultDisplayAngle
+		fillRatio := trs.DefaultFillRatio
+		forceFlip := false
+		if entry != nil {
+			displayAngle = entry.DisplayAngle
+			fillRatio = entry.FillRatio
+			forceFlip = entry.Flip
+		}
+		img = postprocess.StandardizeImage(img, cfg.RenderSize, displayAngle, fillRatio, forceFlip)
+	} else {
+		fillRatio := trs.DefaultFillRatio
+		if entry != nil {
+			fillRatio = entry.FillRatio
+		}
+		img = postprocess.CropAndCenter(img, cfg.RenderSize, fillRatio)
+	}
 
 	// Save as WebP
 	outPath := filepath.Join(cfg.OutputDir, fmt.Sprintf("%d", item.Section), fmt.Sprintf("%d.webp", item.Index))

@@ -10,6 +10,13 @@ import (
 	"golang.org/x/image/draw"
 )
 
+// CropAndCenter crops to the bounding box of non-transparent pixels, then scales and centers.
+// Used when PCA standardization is disabled (standardize: false).
+func CropAndCenter(img *image.NRGBA, size int, fillRatio float64) *image.NRGBA {
+	cropped := cropAlpha(img)
+	return scaleAndCenter(cropped, size, fillRatio)
+}
+
 // StandardizeImage rotates, scales, and centers the item image using PCA alignment.
 func StandardizeImage(img *image.NRGBA, size int, targetAngleDeg, fillRatio float64, forceFlip bool) *image.NRGBA {
 	b := img.Bounds()

@@ -9,6 +9,7 @@ type Entry struct {
 
 	// Optional overrides from custom_trs.json
 	UseBones     *bool   // nil = auto, true/false = forced
+	Standardize  *bool   // nil = true (default), false = skip PCA rotation
 	DisplayAngle float64 // PCA target angle in degrees (default -45)
 	FillRatio    float64 // canvas fill fraction (default 0.70)
 	Flip         bool    // invert auto-orientation detection
