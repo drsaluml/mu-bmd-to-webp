@@ -1,0 +1,17 @@
+# Binary
+mu-bmd-renderer
+mu-bmd-renderer.exe
+
+# Config (may contain local paths)
+config.json
+
+# Output renders
+Data/Item-renders/
+
+# Test data (game assets, not distributable)
+Data/Item/
+Data/Local/
+Data/Xml/
+testdata/*.bmd
+testdata/*.ozj
+testdata/*.ozt

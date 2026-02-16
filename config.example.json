@@ -1,0 +1,12 @@
+{
+  "base_dir": "",
+  "item_dir": "Data/Item",
+  "item_list_xml": "Data/Xml/ItemList.xml",
+  "trs_bmd": "Data/Local/itemtrsdata.bmd",
+  "custom_trs_json": "custom_trs.json",
+  "output_dir": "Data/Item-renders",
+  "render_size": 256,
+  "supersample": 2,
+  "webp_quality": 90,
+  "workers": 0
+}

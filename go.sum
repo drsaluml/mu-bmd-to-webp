@@ -1,0 +1,6 @@
+github.com/HugoSmits86/nativewebp v1.2.1 h1:dJbfulw6WRf6rTcth6TwgEVwlBeP3vdZIJUIoySmeHQ=
+github.com/HugoSmits86/nativewebp v1.2.1/go.mod h1:YNQuWenlVmSUUASVNhTDwf4d7FwYQGbGhklC8p72Vr8=
+github.com/ftrvxmtrx/tga v0.0.0-20150524081124-bd8e8d5be13a h1:eSqaRmdlZ9JsJ7JuWfDr3ym3monToXRczohBOL+heVQ=
+github.com/ftrvxmtrx/tga v0.0.0-20150524081124-bd8e8d5be13a/go.mod h1:US5WvgEHtG+BvWNNs6gk937h0QL2g2x+r7RH8m3g80Y=
+golang.org/x/image v0.36.0 h1:Iknbfm1afbgtwPTmHnS2gTM/6PPZfH+z2EFuOkSbqwc=
+golang.org/x/image v0.36.0/go.mod h1:YsWD2TyyGKiIX1kZlu9QfKIsQ4nAAK9bdgdrIsE7xy4=
