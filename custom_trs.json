@@ -1,6 +1,7 @@
 {
   "sections": {
     "1": { "rotX": 0, "rotY": 18, "rotZ": 0, "scale": 0.0025, "bones": false, "override": true },
+    "16": { "camera": "fallback", "standardize": false, "override": true },
     "19": { "standardize": false, "camera": "fallback" },
     "20": { "standardize": false, "camera": "fallback" },
     "21": { "rotX": 270, "rotY": -10, "rotZ": 0, "scale": 0.0020, "display_angle": -90 }
