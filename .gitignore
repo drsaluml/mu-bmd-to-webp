@@ -15,3 +15,5 @@ Data/Xml/
 testdata/*.bmd
 testdata/*.ozj
 testdata/*.ozt
+
+.claude
