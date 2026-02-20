@@ -72,8 +72,9 @@ type customTRSEntry struct {
 	FillRatio    *float64 `json:"fill_ratio"`
 	Flip         *bool    `json:"flip"`
 	Camera       *string  `json:"camera"`
-	Perspective  *bool    `json:"perspective"`
-	FOV          *float64 `json:"fov"`
+	Perspective    *bool    `json:"perspective"`
+	FOV            *float64 `json:"fov"`
+	KeepAllMeshes  *bool    `json:"keep_all_meshes"`
 }
 
 func makeEntry(c customTRSEntry) *Entry {
@@ -118,6 +119,9 @@ func makeEntry(c customTRSEntry) *Entry {
 	}
 	if c.FOV != nil {
 		e.FOV = *c.FOV
+	}
+	if c.KeepAllMeshes != nil {
+		e.KeepAllMeshes = *c.KeepAllMeshes
 	}
 	return e
 }

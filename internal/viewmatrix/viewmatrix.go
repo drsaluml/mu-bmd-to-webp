@@ -50,9 +50,10 @@ func IsFallbackPath(e *trs.Entry) bool {
 
 // ComputeViewMatrix filters meshes and returns the view matrix + filtered body meshes.
 func ComputeViewMatrix(meshes []bmd.Mesh, entry *trs.Entry) (mathutil.Mat3, []bmd.Mesh) {
+	keepAll := entry != nil && entry.KeepAllMeshes
 	var bodyMeshes []bmd.Mesh
 	for i := range meshes {
-		if filter.IsEffectMesh(&meshes[i]) {
+		if !keepAll && filter.IsEffectMesh(&meshes[i]) {
 			continue
 		}
 		filtered := filter.FilterComponents(&meshes[i], 6)

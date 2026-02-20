@@ -14,8 +14,9 @@ type Entry struct {
 	FillRatio    float64 // canvas fill fraction (default 0.70)
 	Flip         bool    // invert auto-orientation detection
 	Camera       string  // "", "noflip", "correction", "fallback"
-	Perspective  bool    // enable perspective projection
-	FOV          float64 // field of view in degrees (default 75)
+	Perspective    bool    // enable perspective projection
+	FOV            float64 // field of view in degrees (default 75)
+	KeepAllMeshes  bool    // skip effect mesh filtering
 }
 
 // Data maps (section, index) to an Entry.
