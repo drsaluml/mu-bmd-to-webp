@@ -102,6 +102,7 @@
     "20_109": { "rotX": 0, "rotY": 0, "rotZ": 0, "camera": "noflip", "standardize": false },
     "20_137": { "rotX": 0, "rotY": 0, "rotZ": 0, "camera": "noflip", "standardize": false },
     "20_164": { "rotX": 0, "rotY": 0, "rotZ": 0, "camera": "noflip", "standardize": false },
-    "20_238": { "rotX": 0, "rotY": 0, "rotZ": 0, "camera": "noflip", "standardize": false }
+    "20_238": { "rotX": 0, "rotY": 0, "rotZ": 0, "camera": "noflip", "standardize": false },
+    "20_408": { "camera": "fallback", "standardize": false}
   }
 }

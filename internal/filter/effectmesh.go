@@ -1,7 +1,6 @@
 package filter
 
 import (
-	"math"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -175,7 +174,7 @@ func FilterComponents(m *bmd.Mesh, minVerts int) bmd.Mesh {
 				keepVerts[vi] = true
 			}
 		} else {
-			// Keep if close to largest component center
+			// Keep if close to largest component bounding box
 			var cCenter [3]float64
 			for _, vi := range comp {
 				for k := 0; k < 3; k++ {
@@ -185,11 +184,21 @@ func FilterComponents(m *bmd.Mesh, minVerts int) bmd.Mesh {
 			for k := 0; k < 3; k++ {
 				cCenter[k] /= float64(len(comp))
 			}
-			dist := math.Sqrt(
-				(cCenter[0]-lCenter[0])*(cCenter[0]-lCenter[0]) +
-					(cCenter[1]-lCenter[1])*(cCenter[1]-lCenter[1]) +
-					(cCenter[2]-lCenter[2])*(cCenter[2]-lCenter[2]))
-			if dist < lSpan*0.4 {
+			// Distance to nearest point on largest component's bbox
+			var distSq float64
+			for k := 0; k < 3; k++ {
+				lo := float64(lMin[k])
+				hi := float64(lMax[k])
+				c := cCenter[k]
+				if c < lo {
+					d := lo - c
+					distSq += d * d
+				} else if c > hi {
+					d := c - hi
+					distSq += d * d
+				}
+			}
+			if distSq < lSpan*lSpan*0.16 { // 0.4² = 0.16
 				for _, vi := range comp {
 					keepVerts[vi] = true
 				}

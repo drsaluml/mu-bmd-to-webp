@@ -197,3 +197,4 @@ func processItem(cfg Config, item itemlist.ItemDef) Result {
 		Success: true,
 	}
 }
+

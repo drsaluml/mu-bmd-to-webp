@@ -74,7 +74,7 @@ type customTRSEntry struct {
 	Camera       *string  `json:"camera"`
 	Perspective    *bool    `json:"perspective"`
 	FOV            *float64 `json:"fov"`
-	KeepAllMeshes  *bool    `json:"keep_all_meshes"`
+	KeepAllMeshes    *bool             `json:"keep_all_meshes"`
 }
 
 func makeEntry(c customTRSEntry) *Entry {
