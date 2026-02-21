@@ -334,8 +334,11 @@ func RasterizeTriangleAdditive(
 			fb.Color[pxIdx] = clamp255(float64(fb.Color[pxIdx]) + fr)
 			fb.Color[pxIdx+1] = clamp255(float64(fb.Color[pxIdx+1]) + fg)
 			fb.Color[pxIdx+2] = clamp255(float64(fb.Color[pxIdx+2]) + ffb)
-			if ca > fb.Color[pxIdx+3] {
-				fb.Color[pxIdx+3] = ca
+			// Alpha: use brightness of added color (dark pixels stay transparent)
+			lum := fr*0.299 + fg*0.587 + ffb*0.114
+			addAlpha := clamp255(lum)
+			if addAlpha > fb.Color[pxIdx+3] {
+				fb.Color[pxIdx+3] = addAlpha
 			}
 		}
 	}

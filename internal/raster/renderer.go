@@ -92,10 +92,10 @@ func RenderBMD(
 	fb := NewFrameBuffer(renderSize, renderSize)
 	lc := DefaultLightConfig()
 
-	// Split meshes into opaque and additive (_R suffix textures)
+	// Split meshes into opaque and additive
 	var opaqueMeshes, additiveMeshes []bmd.Mesh
 	for _, mesh := range bodyMeshes {
-		if isAdditiveTexture(mesh.TexPath) {
+		if isAdditiveTexture(mesh.TexPath) || isBillboardJPEG(&mesh) {
 			additiveMeshes = append(additiveMeshes, mesh)
 		} else {
 			opaqueMeshes = append(opaqueMeshes, mesh)
@@ -125,6 +125,17 @@ func isAdditiveTexture(texPath string) bool {
 	base := filepath.Base(strings.ReplaceAll(texPath, "\\", "/"))
 	stem := strings.TrimSuffix(base, filepath.Ext(base))
 	return strings.HasSuffix(strings.ToLower(stem), "_r")
+}
+
+// isBillboardJPEG returns true if this mesh is a flat billboard quad (≤8 verts, ≤4 tris)
+// using a JPEG texture (no alpha). These are glow/wing overlays that the game renders
+// with additive blending — black pixels add nothing, bright pixels glow.
+func isBillboardJPEG(m *bmd.Mesh) bool {
+	if len(m.Verts) > 8 || len(m.Tris) > 4 || len(m.Verts) == 0 {
+		return false
+	}
+	ext := strings.ToLower(filepath.Ext(strings.ReplaceAll(m.TexPath, "\\", "/")))
+	return ext == ".jpg" || ext == ".jpeg"
 }
 
 func rasterizeMesh(

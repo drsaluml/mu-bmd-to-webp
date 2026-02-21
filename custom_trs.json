@@ -13,6 +13,7 @@
   },
   "sections": {
     "1":  { "rotX": 0, "rotY": 18, "rotZ": 0, "scale": 0.0025, "bones": false, "override": true },
+    "13": { "camera": "fallback", "standardize": false, "override": true },
     "14": { "camera": "fallback", "display_angle": -90, "override": true },
     "15": { "rotX": -90, "rotY": 80, "rotZ": 0, "camera": "noflip", "standardize": false, "override": true },
     "16": { "camera": "fallback", "standardize": false, "override": true },
