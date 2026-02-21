@@ -95,7 +95,7 @@ func Run(cfg Config, items []itemlist.ItemDef) []Result {
 }
 
 func processItem(cfg Config, item itemlist.ItemDef) Result {
-	bmdPath := filepath.Join(cfg.ItemDir, item.ModelFile)
+	bmdPath := filepath.Join(cfg.ItemDir, item.SubDir, item.ModelFile)
 	if _, err := os.Stat(bmdPath); os.IsNotExist(err) {
 		return Result{
 			Name:    item.Name,

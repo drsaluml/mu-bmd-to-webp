@@ -7,4 +7,5 @@ type ItemDef struct {
 	Index       int
 	Name        string
 	ModelFile   string // e.g. "sword04.bmd"
+	SubDir      string // subdirectory under ItemDir, e.g. "Jewel" (from ModelPath)
 }
