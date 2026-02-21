@@ -3,8 +3,11 @@ package raster
 import (
 	"image"
 	"math"
+	"path/filepath"
+	"strings"
 
 	"mu-bmd-renderer/internal/bmd"
+	"mu-bmd-renderer/internal/filter"
 	"mu-bmd-renderer/internal/mathutil"
 	"mu-bmd-renderer/internal/skeleton"
 	"mu-bmd-renderer/internal/texture"
@@ -21,13 +24,27 @@ func RenderBMD(
 	size int,
 	supersample int,
 ) *image.NRGBA {
-	// Decide bone transforms
+	// Pre-filter effect meshes on raw geometry (before bone transforms distort shapes)
+	keepAll := entry != nil && entry.KeepAllMeshes
+	if !keepAll {
+		var nonEffect []bmd.Mesh
+		for i := range meshes {
+			if !filter.IsEffectMesh(&meshes[i]) {
+				nonEffect = append(nonEffect, meshes[i])
+			}
+		}
+		if len(nonEffect) > 0 {
+			meshes = nonEffect
+		}
+	}
+
+	// Bone transforms
 	useBones := viewmatrix.ShouldUseBones(entry)
 	if useBones {
 		skeleton.ApplyTransforms(meshes, bones)
 	}
 
-	// Compute view matrix + filter meshes
+	// Compute view matrix + filter components
 	R, bodyMeshes := viewmatrix.ComputeViewMatrix(meshes, entry)
 	if len(bodyMeshes) == 0 {
 		return image.NewNRGBA(image.Rect(0, 0, size, size))
@@ -75,38 +92,24 @@ func RenderBMD(
 	fb := NewFrameBuffer(renderSize, renderSize)
 	lc := DefaultLightConfig()
 
-	// Rasterize each mesh
+	// Split meshes into opaque and additive (_R suffix textures)
+	var opaqueMeshes, additiveMeshes []bmd.Mesh
 	for _, mesh := range bodyMeshes {
-		if len(mesh.Verts) == 0 {
-			continue
+		if isAdditiveTexture(mesh.TexPath) {
+			additiveMeshes = append(additiveMeshes, mesh)
+		} else {
+			opaqueMeshes = append(opaqueMeshes, mesh)
 		}
+	}
 
-		px, py, pz := viewmatrix.ProjectVertices(mesh.Verts, R, center, scale, renderSize, entry)
+	// Pass 1: Opaque meshes (normal z-buffer rendering)
+	for _, mesh := range opaqueMeshes {
+		rasterizeMesh(fb, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, false)
+	}
 
-		// Load texture
-		var tex *image.NRGBA
-		if texResolver != nil {
-			tex = texResolver.Resolve(mesh.TexPath)
-		}
-
-		// Compute default color (average of texture)
-		var defR, defG, defB, defA uint8 = 160, 160, 170, 255
-		if tex != nil {
-			defR, defG, defB, defA = averageColor(tex)
-		}
-
-		for _, tri := range mesh.Tris {
-			vi := [3]int{int(tri.VI[0]), int(tri.VI[1]), int(tri.VI[2])}
-			ti := [3]int{int(tri.TI[0]), int(tri.TI[1]), int(tri.TI[2])}
-			RasterizeTriangle(fb, px, py, pz, mesh.UVs, vi, ti, tex, defR, defG, defB, defA, &lc)
-
-			// Quad: second triangle
-			if tri.Polygon == 4 {
-				vi2 := [3]int{int(tri.VI[0]), int(tri.VI[2]), int(tri.VI[3])}
-				ti2 := [3]int{int(tri.TI[0]), int(tri.TI[2]), int(tri.TI[3])}
-				RasterizeTriangle(fb, px, py, pz, mesh.UVs, vi2, ti2, tex, defR, defG, defB, defA, &lc)
-			}
-		}
+	// Pass 2: Additive meshes (no z-buffer, add colors on top)
+	for _, mesh := range additiveMeshes {
+		rasterizeMesh(fb, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, true)
 	}
 
 	// Convert framebuffer to image
@@ -114,6 +117,54 @@ func RenderBMD(
 	copy(img.Pix, fb.Color)
 
 	return img
+}
+
+// isAdditiveTexture returns true if a texture name ends with _R (MU Online convention
+// for additive glow/liquid overlays, e.g. "secret_R.jpg", "songko2_R.jpg").
+func isAdditiveTexture(texPath string) bool {
+	base := filepath.Base(strings.ReplaceAll(texPath, "\\", "/"))
+	stem := strings.TrimSuffix(base, filepath.Ext(base))
+	return strings.HasSuffix(strings.ToLower(stem), "_r")
+}
+
+func rasterizeMesh(
+	fb *FrameBuffer, mesh *bmd.Mesh,
+	R mathutil.Mat3, center [3]float64, scale float64, renderSize int,
+	entry *trs.Entry, texResolver texture.Resolver, lc *LightConfig,
+	additive bool,
+) {
+	if len(mesh.Verts) == 0 {
+		return
+	}
+
+	px, py, pz := viewmatrix.ProjectVertices(mesh.Verts, R, center, scale, renderSize, entry)
+
+	var tex *image.NRGBA
+	if texResolver != nil {
+		tex = texResolver.Resolve(mesh.TexPath)
+	}
+
+	var defR, defG, defB, defA uint8 = 160, 160, 170, 255
+	if tex != nil {
+		defR, defG, defB, defA = averageColor(tex)
+	}
+
+	rasterFn := RasterizeTriangle
+	if additive {
+		rasterFn = RasterizeTriangleAdditive
+	}
+
+	for _, tri := range mesh.Tris {
+		vi := [3]int{int(tri.VI[0]), int(tri.VI[1]), int(tri.VI[2])}
+		ti := [3]int{int(tri.TI[0]), int(tri.TI[1]), int(tri.TI[2])}
+		rasterFn(fb, px, py, pz, mesh.UVs, vi, ti, tex, defR, defG, defB, defA, lc)
+
+		if tri.Polygon == 4 {
+			vi2 := [3]int{int(tri.VI[0]), int(tri.VI[2]), int(tri.VI[3])}
+			ti2 := [3]int{int(tri.TI[0]), int(tri.TI[2]), int(tri.TI[3])}
+			rasterFn(fb, px, py, pz, mesh.UVs, vi2, ti2, tex, defR, defG, defB, defA, lc)
+		}
+	}
 }
 
 func averageColor(tex *image.NRGBA) (uint8, uint8, uint8, uint8) {

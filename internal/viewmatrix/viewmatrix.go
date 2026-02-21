@@ -48,24 +48,13 @@ func IsFallbackPath(e *trs.Entry) bool {
 	return mathutil.AngleDist(e.RotY, 90) <= 45 && mathutil.AngleDist(e.RotY, 270) > 45
 }
 
-// ComputeViewMatrix filters meshes and returns the view matrix + filtered body meshes.
+// ComputeViewMatrix applies component filtering and returns the view matrix + filtered body meshes.
+// Effect mesh filtering is done earlier in the pipeline (before bone transforms).
 func ComputeViewMatrix(meshes []bmd.Mesh, entry *trs.Entry) (mathutil.Mat3, []bmd.Mesh) {
-	keepAll := entry != nil && entry.KeepAllMeshes
 	var bodyMeshes []bmd.Mesh
 	for i := range meshes {
-		if !keepAll && filter.IsEffectMesh(&meshes[i]) {
-			continue
-		}
 		filtered := filter.FilterComponents(&meshes[i], 6)
 		bodyMeshes = append(bodyMeshes, filtered)
-	}
-
-	// Fallback: if all meshes were filtered, use them all
-	if len(bodyMeshes) == 0 {
-		for i := range meshes {
-			filtered := filter.FilterComponents(&meshes[i], 6)
-			bodyMeshes = append(bodyMeshes, filtered)
-		}
 	}
 
 	if len(bodyMeshes) == 0 {
