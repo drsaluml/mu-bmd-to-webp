@@ -57,6 +57,7 @@ func Load(bmdPath, customJSONPath, itemListXMLPath string) (Data, error) {
 // customTRSFile matches the JSON schema of custom_trs.json.
 type customTRSFile struct {
 	Sections map[string]json.RawMessage `json:"sections"`
+	Models   map[string]json.RawMessage `json:"models"`
 	Items    map[string]json.RawMessage `json:"items"`
 }
 
@@ -138,30 +139,49 @@ func mergeCustomTRS(data Data, jsonPath, xmlPath string) {
 		return
 	}
 
-	// Section defaults/overrides
-	if len(file.Sections) > 0 {
-		items, _ := itemlist.Parse(xmlPath)
-		for secStr, rawEntry := range file.Sections {
-			sec, err := strconv.Atoi(secStr)
-			if err != nil {
-				continue
-			}
-			var c customTRSEntry
-			if err := json.Unmarshal(rawEntry, &c); err != nil {
-				continue
-			}
-			override := c.Override != nil && *c.Override
-			entry := makeEntry(c)
+	// Parse itemlist once for sections and models lookups
+	var items []itemlist.ItemDef
+	if len(file.Sections) > 0 || len(file.Models) > 0 {
+		items, _ = itemlist.Parse(xmlPath)
+	}
 
-			for _, item := range items {
-				if item.Section != sec {
-					continue
-				}
-				key := [2]int{sec, item.Index}
-				if override || data[key] == nil {
-					entryCopy := *entry
-					data[key] = &entryCopy
-				}
+	// Section defaults/overrides
+	for secStr, rawEntry := range file.Sections {
+		sec, err := strconv.Atoi(secStr)
+		if err != nil {
+			continue
+		}
+		var c customTRSEntry
+		if err := json.Unmarshal(rawEntry, &c); err != nil {
+			continue
+		}
+		override := c.Override != nil && *c.Override
+		entry := makeEntry(c)
+
+		for _, item := range items {
+			if item.Section != sec {
+				continue
+			}
+			key := [2]int{sec, item.Index}
+			if override || data[key] == nil {
+				entryCopy := *entry
+				data[key] = &entryCopy
+			}
+		}
+	}
+
+	// Model overrides (override sections and binary)
+	for modelFile, rawEntry := range file.Models {
+		var c customTRSEntry
+		if err := json.Unmarshal(rawEntry, &c); err != nil {
+			continue
+		}
+		entry := makeEntry(c)
+		for _, item := range items {
+			if strings.EqualFold(item.ModelFile, modelFile) {
+				key := [2]int{item.Section, item.Index}
+				entryCopy := *entry
+				data[key] = &entryCopy
 			}
 		}
 	}

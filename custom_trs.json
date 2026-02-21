@@ -8,6 +8,10 @@
     "20": { "standardize": false, "camera": "fallback" },
     "21": { "rotX": 270, "rotY": -10, "rotZ": 0, "scale": 0.002, "display_angle": -90 }
   },
+  "models": {
+    "itembox_gold.bmd": { "rotX": -75, "rotY": 15, "rotZ": 3.5, "camera": "noflip", "standardize": false },
+    "itembox_silver.bmd": { "rotX": -75, "rotY": 15, "rotZ": 3.5, "camera": "noflip", "standardize": false }
+  },
   "items": {
     "1_0": { "rotX": 0, "rotY": 18, "rotZ": 140, "scale": 0.0025, "bones": false },
     "1_3": { "rotX": 180, "rotY": 18, "rotZ": 0, "scale": 0.0025, "bones": false },
@@ -102,7 +106,6 @@
     "20_109": { "rotX": 0, "rotY": 0, "rotZ": 0, "camera": "noflip", "standardize": false },
     "20_137": { "rotX": 0, "rotY": 0, "rotZ": 0, "camera": "noflip", "standardize": false },
     "20_164": { "rotX": 0, "rotY": 0, "rotZ": 0, "camera": "noflip", "standardize": false },
-    "20_238": { "rotX": 0, "rotY": 0, "rotZ": 0, "camera": "noflip", "standardize": false },
-    "20_408": { "camera": "fallback", "standardize": false}
+    "20_238": { "rotX": 0, "rotY": 0, "rotZ": 0, "camera": "noflip", "standardize": false }
   }
 }
