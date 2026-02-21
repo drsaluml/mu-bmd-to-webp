@@ -56,6 +56,7 @@ func Load(bmdPath, customJSONPath, itemListXMLPath string) (Data, error) {
 
 // customTRSFile matches the JSON schema of custom_trs.json.
 type customTRSFile struct {
+	Presets  map[string]json.RawMessage `json:"presets"`
 	Sections map[string]json.RawMessage `json:"sections"`
 	Models   map[string]json.RawMessage `json:"models"`
 	Items    map[string]json.RawMessage `json:"items"`
@@ -77,6 +78,37 @@ type customTRSEntry struct {
 	FOV            *float64 `json:"fov"`
 	KeepAllMeshes    *bool             `json:"keep_all_meshes"`
 	FlipCanvas       *bool             `json:"flip_canvas"`
+}
+
+// parseItemKeys parses "section_index" or "section_start-end" into key pairs.
+func parseItemKeys(keyStr string) [][2]int {
+	parts := strings.SplitN(keyStr, "_", 2)
+	if len(parts) != 2 {
+		return nil
+	}
+	sec, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return nil
+	}
+	// Range: "72-77"
+	if rng := strings.SplitN(parts[1], "-", 2); len(rng) == 2 {
+		start, err1 := strconv.Atoi(rng[0])
+		end, err2 := strconv.Atoi(rng[1])
+		if err1 != nil || err2 != nil || start > end {
+			return nil
+		}
+		keys := make([][2]int, 0, end-start+1)
+		for i := start; i <= end; i++ {
+			keys = append(keys, [2]int{sec, i})
+		}
+		return keys
+	}
+	// Single: "72"
+	idx, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return nil
+	}
+	return [][2]int{{sec, idx}}
 }
 
 func makeEntry(c customTRSEntry) *Entry {
@@ -131,6 +163,25 @@ func makeEntry(c customTRSEntry) *Entry {
 	return e
 }
 
+// resolveEntry resolves a json.RawMessage that is either a preset name (string)
+// or an inline config object into a customTRSEntry.
+func resolveEntry(raw json.RawMessage, presets map[string]json.RawMessage) (*customTRSEntry, error) {
+	// Try string first (preset reference)
+	var name string
+	if err := json.Unmarshal(raw, &name); err == nil {
+		presetRaw, ok := presets[name]
+		if !ok {
+			return nil, fmt.Errorf("preset %q not found", name)
+		}
+		raw = presetRaw
+	}
+	var c customTRSEntry
+	if err := json.Unmarshal(raw, &c); err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
 func mergeCustomTRS(data Data, jsonPath, xmlPath string) {
 	raw, err := os.ReadFile(jsonPath)
 	if err != nil {
@@ -155,12 +206,12 @@ func mergeCustomTRS(data Data, jsonPath, xmlPath string) {
 		if err != nil {
 			continue
 		}
-		var c customTRSEntry
-		if err := json.Unmarshal(rawEntry, &c); err != nil {
+		c, err := resolveEntry(rawEntry, file.Presets)
+		if err != nil {
 			continue
 		}
 		override := c.Override != nil && *c.Override
-		entry := makeEntry(c)
+		entry := makeEntry(*c)
 
 		for _, item := range items {
 			if item.Section != sec {
@@ -175,36 +226,60 @@ func mergeCustomTRS(data Data, jsonPath, xmlPath string) {
 	}
 
 	// Model overrides (override sections and binary)
-	for modelFile, rawEntry := range file.Models {
-		var c customTRSEntry
-		if err := json.Unmarshal(rawEntry, &c); err != nil {
+	// Supports two formats:
+	//   "model.bmd": "preset"           — single model → preset/inline config
+	//   "preset": ["a.bmd", "b.bmd"]   — preset name → array of model files
+	for key, rawEntry := range file.Models {
+		// Try array format: key=preset, value=["model1.bmd", "model2.bmd"]
+		var modelFiles []string
+		if json.Unmarshal(rawEntry, &modelFiles) == nil && len(modelFiles) > 0 {
+			presetRaw, ok := file.Presets[key]
+			if !ok {
+				continue
+			}
+			var c customTRSEntry
+			if json.Unmarshal(presetRaw, &c) != nil {
+				continue
+			}
+			entry := makeEntry(c)
+			for _, mf := range modelFiles {
+				for _, item := range items {
+					if strings.EqualFold(item.ModelFile, mf) {
+						entryCopy := *entry
+						data[[2]int{item.Section, item.Index}] = &entryCopy
+					}
+				}
+			}
 			continue
 		}
-		entry := makeEntry(c)
+
+		// Normal format: key=model filename, value=preset or inline config
+		c, err := resolveEntry(rawEntry, file.Presets)
+		if err != nil {
+			continue
+		}
+		entry := makeEntry(*c)
 		for _, item := range items {
-			if strings.EqualFold(item.ModelFile, modelFile) {
-				key := [2]int{item.Section, item.Index}
+			if strings.EqualFold(item.ModelFile, key) {
 				entryCopy := *entry
-				data[key] = &entryCopy
+				data[[2]int{item.Section, item.Index}] = &entryCopy
 			}
 		}
 	}
 
 	// Per-item overrides (always win)
+	// Keys support range syntax: "14_72-77" expands to 14_72, 14_73, ... 14_77
 	for keyStr, rawEntry := range file.Items {
-		parts := strings.SplitN(keyStr, "_", 2)
-		if len(parts) != 2 {
+		keys := parseItemKeys(keyStr)
+		if keys == nil {
 			continue
 		}
-		sec, err1 := strconv.Atoi(parts[0])
-		idx, err2 := strconv.Atoi(parts[1])
-		if err1 != nil || err2 != nil {
+		c, err := resolveEntry(rawEntry, file.Presets)
+		if err != nil {
 			continue
 		}
-		var c customTRSEntry
-		if err := json.Unmarshal(rawEntry, &c); err != nil {
-			continue
+		for _, key := range keys {
+			data[key] = makeEntry(*c)
 		}
-		data[[2]int{sec, idx}] = makeEntry(c)
 	}
 }
