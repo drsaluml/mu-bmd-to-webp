@@ -14,6 +14,10 @@
     "RudeBox_blue.bmd": { "rotX": -75, "rotY": 15, "rotZ": 3.5, "camera": "noflip", "standardize": false },
     "RudeBox_red.bmd": { "rotX": -75, "rotY": 15, "rotZ": 3.5, "camera": "noflip", "standardize": false },
     "RudeBox_green.bmd": { "rotX": -75, "rotY": 15, "rotZ": 3.5, "camera": "noflip", "standardize": false },
+    "rewardbox01.bmd": { "rotX": -75, "rotY": 15, "rotZ": 3.5, "camera": "noflip", "standardize": false },
+    "rewardbox02.bmd": { "rotX": -75, "rotY": 15, "rotZ": 3.5, "camera": "noflip", "standardize": false },
+    "rewardbox03.bmd": { "rotX": -75, "rotY": 15, "rotZ": 3.5, "camera": "noflip", "standardize": false },
+    "rewardbox04.bmd": { "rotX": -75, "rotY": 15, "rotZ": 3.5, "camera": "noflip", "standardize": false },
     "rewardbox05.bmd": { "rotX": -75, "rotY": 15, "rotZ": 3.5, "camera": "noflip", "standardize": false },
     "rewardbox06.bmd": { "rotX": -75, "rotY": 15, "rotZ": 3.5, "camera": "noflip", "standardize": false },
     "earringbox.bmd": { "rotX": -75, "rotY": 15, "rotZ": 3.5, "camera": "noflip", "standardize": false },
@@ -21,7 +25,10 @@
     "Boss_invitationticket.bmd": { "rotX": 0, "rotY": 0, "rotZ": 0, "camera": "noflip", "standardize": false },
     "EXPpotion_blue.bmd": { "camera": "fallback", "display_angle": -90, "flip": true },
     "strengscroll.bmd": { "rotX": -90, "rotY": 80, "rotZ": 0, "camera": "noflip", "standardize": false },
-    "coin7.bmd": { "rotX": -45, "rotY": 10, "rotZ": 0, "camera": "noflip", "standardize": false }
+    "coin7.bmd": { "rotX": -45, "rotY": 10, "rotZ": 0, "camera": "noflip", "standardize": false },
+    "5charingst.bmd": { "rotX": 15, "rotY": -15, "rotZ": 220, "camera": "noflip", "standardize": false },
+    "earring7mold.bmd": { "rotX": 15, "rotY": -15, "rotZ": 220, "camera": "noflip", "standardize": false },
+    "earring8mold.bmd": { "rotX": 15, "rotY": -15, "rotZ": 220, "camera": "noflip", "standardize": false }
   },
   "items": {
     "1_0": { "rotX": 0, "rotY": 18, "rotZ": 140, "scale": 0.0025, "bones": false },
