@@ -11,7 +11,7 @@ import (
 )
 
 // Parse reads a BMD file and returns meshes and bones.
-// Supports versions 10 (unencrypted), 12 (XOR), and 15 (LEA-256 ECB).
+// Supports versions 10 (unencrypted), 12 (XOR), 14 (ModulusCryptor), and 15 (LEA-256 ECB).
 func Parse(filepath string) ([]Mesh, []Bone, error) {
 	raw, err := os.ReadFile(filepath)
 	if err != nil {
@@ -35,6 +35,15 @@ func Parse(filepath string) ([]Mesh, []Bone, error) {
 			return nil, nil, fmt.Errorf("bmd: truncated v15 data in %s", filepath)
 		}
 		data = crypto.DecryptLEA(raw[8:8+size], crypto.LEAKey)
+	case 14:
+		if len(raw) < 8 {
+			return nil, nil, fmt.Errorf("bmd: truncated v14 header in %s", filepath)
+		}
+		size := binary.LittleEndian.Uint32(raw[4:8])
+		if 8+int(size) > len(raw) {
+			return nil, nil, fmt.Errorf("bmd: truncated v14 data in %s", filepath)
+		}
+		data = crypto.DecryptModulus(raw[8 : 8+size])
 	case 12:
 		if len(raw) < 8 {
 			return nil, nil, fmt.Errorf("bmd: truncated v12 header in %s", filepath)
