@@ -78,6 +78,7 @@ type customTRSEntry struct {
 	FOV            *float64 `json:"fov"`
 	KeepAllMeshes    *bool             `json:"keep_all_meshes"`
 	FlipCanvas       *bool             `json:"flip_canvas"`
+	Merge            *bool             `json:"merge"`
 }
 
 // parseItemKeys parses "section_index" or "section_start-end" into key pairs.
@@ -163,6 +164,53 @@ func makeEntry(c customTRSEntry) *Entry {
 	return e
 }
 
+// mergeEntryFields merges only non-nil fields from customTRSEntry into an existing Entry.
+// Used by section "merge" mode to override specific fields while keeping binary TRS values.
+func mergeEntryFields(existing *Entry, c customTRSEntry) {
+	if c.RotX != nil {
+		existing.RotX = *c.RotX
+	}
+	if c.RotY != nil {
+		existing.RotY = *c.RotY
+	}
+	if c.RotZ != nil {
+		existing.RotZ = *c.RotZ
+	}
+	if c.Scale != nil {
+		existing.Scale = *c.Scale
+	}
+	if c.Bones != nil {
+		existing.UseBones = c.Bones
+	}
+	if c.Standardize != nil {
+		existing.Standardize = c.Standardize
+	}
+	if c.DisplayAngle != nil {
+		existing.DisplayAngle = *c.DisplayAngle
+	}
+	if c.FillRatio != nil {
+		existing.FillRatio = *c.FillRatio
+	}
+	if c.Flip != nil {
+		existing.Flip = *c.Flip
+	}
+	if c.Camera != nil {
+		existing.Camera = *c.Camera
+	}
+	if c.Perspective != nil {
+		existing.Perspective = *c.Perspective
+	}
+	if c.FOV != nil {
+		existing.FOV = *c.FOV
+	}
+	if c.KeepAllMeshes != nil {
+		existing.KeepAllMeshes = *c.KeepAllMeshes
+	}
+	if c.FlipCanvas != nil {
+		existing.FlipCanvas = *c.FlipCanvas
+	}
+}
+
 // resolveEntry resolves a json.RawMessage that is either a preset name (string)
 // or an inline config object into a customTRSEntry.
 func resolveEntry(raw json.RawMessage, presets map[string]json.RawMessage) (*customTRSEntry, error) {
@@ -211,6 +259,7 @@ func mergeCustomTRS(data Data, jsonPath, xmlPath string) {
 			continue
 		}
 		override := c.Override != nil && *c.Override
+		merge := c.Merge != nil && *c.Merge
 		entry := makeEntry(*c)
 
 		for _, item := range items {
@@ -218,7 +267,17 @@ func mergeCustomTRS(data Data, jsonPath, xmlPath string) {
 				continue
 			}
 			key := [2]int{sec, item.Index}
-			if override || data[key] == nil {
+			existing := data[key]
+
+			if existing == nil {
+				// No binary TRS: create from section config
+				entryCopy := *entry
+				data[key] = &entryCopy
+			} else if merge {
+				// Merge: only override specified (non-nil) fields
+				mergeEntryFields(existing, *c)
+			} else if override {
+				// Override: replace entirely
 				entryCopy := *entry
 				data[key] = &entryCopy
 			}
