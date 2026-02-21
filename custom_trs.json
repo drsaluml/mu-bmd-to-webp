@@ -29,12 +29,13 @@
       "rewardbox01.bmd", "rewardbox02.bmd", "rewardbox03.bmd",
       "rewardbox04.bmd", "rewardbox05.bmd", "rewardbox06.bmd",
       "earringbox.bmd", "GM02.bmd","GoblinBox_Green.bmd","GoblinBox_Blue.bmd",
-      "GoblinBox_Red.bmd","GoblinBox_Yellow.bmd"
+      "GoblinBox_Red.bmd","GoblinBox_Yellow.bmd" ,"requitalbox_wood.bmd" ,"primium_membership_item.bmd",
+      "package_money_item.bmd"
     ],
     "book": ["Book01.bmd", "strengscroll.bmd"],
     "earring": ["gloryearringst.bmd", "mr2earringst.bmd","mr4earringst.bmd", "unityearringst.bmd", "5charingst.bmd", "earring7mold.bmd", "earring8mold.bmd"],
     "flat": ["warrant.bmd", "Boss_invitationticket.bmd"],
-    "potion": ["IllusionBead_violet.bmd", "EXPpotion_blue.bmd"],
+    "potion": ["IllusionBead_violet.bmd", "EXPpotion_blue.bmd" ,"Drink00.bmd"],
     "charm": ["TempleGuard_anvil.bmd"],
     "coin7.bmd": { "rotX": -45, "rotY": 10, "rotZ": 0, "camera": "noflip", "standardize": false }
   },

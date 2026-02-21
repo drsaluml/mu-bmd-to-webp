@@ -34,39 +34,6 @@ func IsEffectMesh(m *bmd.Mesh) bool {
 		}
 	}
 
-	// Flat billboard heuristic — a mesh extremely flat in one axis is an effect plane
-	// (e.g. fire/aura billboards behind 3D objects)
-	if nv := len(m.Verts); nv > 8 && nv <= 24 {
-		var minV, maxV [3]float32
-		minV = m.Verts[0]
-		maxV = m.Verts[0]
-		for _, v := range m.Verts[1:] {
-			for k := 0; k < 3; k++ {
-				if v[k] < minV[k] {
-					minV[k] = v[k]
-				}
-				if v[k] > maxV[k] {
-					maxV[k] = v[k]
-				}
-			}
-		}
-		var spans [3]float64
-		maxSpan := float64(0)
-		minSpan := float64(1e9)
-		for k := 0; k < 3; k++ {
-			spans[k] = float64(maxV[k] - minV[k])
-			if spans[k] > maxSpan {
-				maxSpan = spans[k]
-			}
-			if spans[k] < minSpan {
-				minSpan = spans[k]
-			}
-		}
-		if maxSpan > 20 && minSpan < maxSpan*0.02 {
-			return true
-		}
-	}
-
 	// Small geometry heuristic — but keep large quads (e.g. blade decals)
 	nv := len(m.Verts)
 	nt := len(m.Tris)
