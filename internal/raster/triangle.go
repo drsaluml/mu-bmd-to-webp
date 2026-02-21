@@ -22,8 +22,8 @@ func RasterizeTriangle(
 	nv := len(px)
 	nuv := len(uvs)
 
-	// Winding correction: swap indices 1 and 2 (matches Python)
-	idx := [3]int{vi[0], vi[2], vi[1]}
+	// Caller controls winding order via vi (renderer.go handles swap)
+	idx := [3]int{vi[0], vi[1], vi[2]}
 
 	// Bounds check
 	for _, i := range idx {
@@ -36,8 +36,7 @@ func RasterizeTriangle(
 	x1, y1, z1 := px[idx[1]], py[idx[1]], pz[idx[1]]
 	x2, y2, z2 := px[idx[2]], py[idx[2]], pz[idx[2]]
 
-	// UV indices (also swapped)
-	uvIdx := [3]int{ti[0], ti[2], ti[1]}
+	uvIdx := [3]int{ti[0], ti[1], ti[2]}
 	hasUV := tex != nil
 	for _, i := range uvIdx {
 		if i < 0 || i >= nuv {

@@ -17,6 +17,7 @@ type Entry struct {
 	Perspective    bool    // enable perspective projection
 	FOV            float64 // field of view in degrees (default 75)
 	KeepAllMeshes    bool              // skip effect mesh filtering
+	FlipCanvas       bool              // mirror final image horizontally
 }
 
 // Data maps (section, index) to an Entry.

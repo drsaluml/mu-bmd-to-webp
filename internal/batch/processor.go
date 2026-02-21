@@ -159,6 +159,11 @@ func processItem(cfg Config, item itemlist.ItemDef) Result {
 		img = postprocess.CropAndCenter(img, cfg.RenderSize, fillRatio)
 	}
 
+	// Horizontal canvas flip
+	if entry != nil && entry.FlipCanvas {
+		img = postprocess.FlipHorizontal(img)
+	}
+
 	// Save as WebP
 	outPath := filepath.Join(cfg.OutputDir, fmt.Sprintf("%d", item.Section), fmt.Sprintf("%d.webp", item.Index))
 	if err := os.MkdirAll(filepath.Dir(outPath), 0755); err != nil {

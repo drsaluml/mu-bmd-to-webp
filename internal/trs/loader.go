@@ -76,6 +76,7 @@ type customTRSEntry struct {
 	Perspective    *bool    `json:"perspective"`
 	FOV            *float64 `json:"fov"`
 	KeepAllMeshes    *bool             `json:"keep_all_meshes"`
+	FlipCanvas       *bool             `json:"flip_canvas"`
 }
 
 func makeEntry(c customTRSEntry) *Entry {
@@ -123,6 +124,9 @@ func makeEntry(c customTRSEntry) *Entry {
 	}
 	if c.KeepAllMeshes != nil {
 		e.KeepAllMeshes = *c.KeepAllMeshes
+	}
+	if c.FlipCanvas != nil {
+		e.FlipCanvas = *c.FlipCanvas
 	}
 	return e
 }

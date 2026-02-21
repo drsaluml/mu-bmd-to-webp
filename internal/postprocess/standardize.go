@@ -371,3 +371,24 @@ func scaleAndCenter(img *image.NRGBA, canvasSize int, fillRatio float64) *image.
 	_ = color.NRGBA{}
 	return canvas
 }
+
+// FlipHorizontal mirrors an image left-to-right.
+func FlipHorizontal(img *image.NRGBA) *image.NRGBA {
+	b := img.Bounds()
+	w, h := b.Dx(), b.Dy()
+	out := image.NewNRGBA(image.Rect(0, 0, w, h))
+	for y := 0; y < h; y++ {
+		srcOff := y * img.Stride
+		dstOff := y * out.Stride
+		for x := 0; x < w; x++ {
+			mx := w - 1 - x
+			si := srcOff + mx*4
+			di := dstOff + x*4
+			out.Pix[di] = img.Pix[si]
+			out.Pix[di+1] = img.Pix[si+1]
+			out.Pix[di+2] = img.Pix[si+2]
+			out.Pix[di+3] = img.Pix[si+3]
+		}
+	}
+	return out
+}

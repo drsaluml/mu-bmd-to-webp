@@ -96,8 +96,8 @@ func RenderBMD(
 		}
 
 		for _, tri := range mesh.Tris {
-			vi := [3]int{int(tri.VI[0]), int(tri.VI[2]), int(tri.VI[1])}
-			ti := [3]int{int(tri.TI[0]), int(tri.TI[2]), int(tri.TI[1])}
+			vi := [3]int{int(tri.VI[0]), int(tri.VI[1]), int(tri.VI[2])}
+			ti := [3]int{int(tri.TI[0]), int(tri.TI[1]), int(tri.TI[2])}
 			RasterizeTriangle(fb, px, py, pz, mesh.UVs, vi, ti, tex, defR, defG, defB, defA, &lc)
 
 			// Quad: second triangle
