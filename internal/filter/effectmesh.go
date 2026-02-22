@@ -13,10 +13,11 @@ var gradientEffectRE = regexp.MustCompile(`^(?:mini_|hangul)?gra(?:\d|_|$)`)
 var effectPatterns = []string{
 	"glow", "flare", "chrome", "effect",
 	"aura", "shiny", "spark", "fire", "blur",
-	"lightning", "elec_light", "arrowlight", "lighting_mega", "pin_star",
+	"elec_light", "arrowlight", "lighting_mega", "pin_star",
 	"lightmarks", "light_blue", "light_red",
 	"flame", "energy", "plasma", "shine", "halo", "trail",
-	"gradation", "sdblight",
+	"gradation", "sdblight", "alpha_line", "4x4", "damage",
+	"ground_wind", "line_of_big",
 }
 
 // IsEffectMesh returns true if this mesh is an aura/glow/effect overlay.

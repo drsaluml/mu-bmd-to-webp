@@ -6,15 +6,22 @@ import (
 	"strings"
 )
 
+// texEntry stores both OZJ and OZT paths for a texture stem.
+type texEntry struct {
+	ozj string // OZJ (JPEG, no alpha) path
+	ozt string // OZT (TGA, has alpha) path
+}
+
 // Index maps lowercase texture stems to filesystem paths.
-// OZT files take priority over OZJ for the same stem (alpha channel).
+// When both OZJ and OZT exist for a stem, the caller's requested extension
+// determines which to use: .jpg/.jpeg requests prefer OZJ, .tga requests prefer OZT.
 type Index struct {
-	entries map[string]string // stem.lower() → full path
+	entries map[string]*texEntry // stem.lower() → paths
 }
 
 // BuildIndex scans itemDir/texture/ and subdirectories for OZJ/OZT files.
 func BuildIndex(itemDir string) *Index {
-	idx := &Index{entries: make(map[string]string)}
+	idx := &Index{entries: make(map[string]*texEntry)}
 
 	// Scan main texture dir and all subdirectory texture dirs
 	searchDirs := []string{filepath.Join(itemDir, "texture")}
@@ -47,12 +54,15 @@ func BuildIndex(itemDir string) *Index {
 			}
 			stem := strings.ToLower(strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)))
 
-			existing, exists := idx.entries[stem]
-			if !exists {
-				idx.entries[stem] = path
-			} else if ext == ".ozt" && strings.ToLower(filepath.Ext(existing)) == ".ozj" {
-				// OZT wins over OZJ (has alpha channel)
-				idx.entries[stem] = path
+			entry := idx.entries[stem]
+			if entry == nil {
+				entry = &texEntry{}
+				idx.entries[stem] = entry
+			}
+			if ext == ".ozj" && entry.ozj == "" {
+				entry.ozj = path
+			} else if ext == ".ozt" && entry.ozt == "" {
+				entry.ozt = path
 			}
 			return nil
 		})
@@ -62,14 +72,49 @@ func BuildIndex(itemDir string) *Index {
 }
 
 // ResolvePath returns the filesystem path for a texture name, or ("", false).
+// When both OZJ and OZT exist for the same stem, the requested extension
+// determines priority: .jpg/.jpeg → OZJ first, .tga → OZT first.
+// This ensures JPEG-referencing meshes get opaque textures and TGA-referencing
+// meshes get alpha-channel textures, matching the model designer's intent.
 func (idx *Index) ResolvePath(texName string) (string, bool) {
 	// Strip path prefix (e.g., "Monsters\\texture\\foo.jpg" → "foo")
 	texName = strings.ReplaceAll(texName, "\\", "/")
 	base := filepath.Base(texName)
+	reqExt := strings.ToLower(filepath.Ext(base))
 	stem := strings.ToLower(strings.TrimSuffix(base, filepath.Ext(base)))
 
-	path, ok := idx.entries[stem]
-	return path, ok
+	entry, ok := idx.entries[stem]
+	if !ok {
+		return "", false
+	}
+
+	// Choose based on requested extension
+	switch reqExt {
+	case ".jpg", ".jpeg":
+		if entry.ozj != "" {
+			return entry.ozj, true
+		}
+		if entry.ozt != "" {
+			return entry.ozt, true
+		}
+	case ".tga":
+		if entry.ozt != "" {
+			return entry.ozt, true
+		}
+		if entry.ozj != "" {
+			return entry.ozj, true
+		}
+	default:
+		// Unknown extension: prefer OZT (has alpha)
+		if entry.ozt != "" {
+			return entry.ozt, true
+		}
+		if entry.ozj != "" {
+			return entry.ozj, true
+		}
+	}
+
+	return "", false
 }
 
 // Len returns the number of indexed textures.

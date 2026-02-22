@@ -38,6 +38,14 @@ func RenderBMD(
 		}
 	}
 
+	// Filter glow layer pairs (before bone transforms change geometry).
+	// Detects JPEG+TGA pairs with same (verts, tris) count, and standalone
+	// bright JPEG glow layers. The game composites these with special blending;
+	// without it, their colored backgrounds create visible auras.
+	if !keepAll && texResolver != nil && len(meshes) > 1 {
+		meshes = filterGlowLayers(meshes, texResolver)
+	}
+
 	// Bone transforms
 	useBones := viewmatrix.ShouldUseBones(entry)
 	if useBones {
@@ -127,11 +135,12 @@ func isAdditiveTexture(texPath string) bool {
 	return strings.HasSuffix(strings.ToLower(stem), "_r")
 }
 
-// isBillboardJPEG returns true if this mesh is a flat billboard quad (≤8 verts, ≤4 tris)
-// using a JPEG texture (no alpha). These are glow/wing overlays that the game renders
-// with additive blending — black pixels add nothing, bright pixels glow.
+// isBillboardJPEG returns true if this mesh is a flat billboard (≤16 verts, ≤8 tris)
+// using a JPEG texture (no alpha). These are glow/wing/energy overlays that the game
+// renders with additive blending — black pixels add nothing, bright pixels glow.
+// Covers single quads (4v/2t), double quads (8v/4t), and cross-shaped billboards (12v/6t).
 func isBillboardJPEG(m *bmd.Mesh) bool {
-	if len(m.Verts) > 8 || len(m.Tris) > 4 || len(m.Verts) == 0 {
+	if len(m.Verts) > 16 || len(m.Tris) > 8 || len(m.Verts) == 0 {
 		return false
 	}
 	ext := strings.ToLower(filepath.Ext(strings.ReplaceAll(m.TexPath, "\\", "/")))
@@ -176,6 +185,123 @@ func rasterizeMesh(
 			rasterFn(fb, px, py, pz, mesh.UVs, vi2, ti2, tex, defR, defG, defB, defA, lc)
 		}
 	}
+}
+
+// filterGlowLayers removes glow layer meshes from the body mesh list.
+// Detects two patterns:
+// 1. Geometry pairs: meshes with same (verts, tris) count where one uses JPEG
+//    and another uses TGA — the game composites these with special blending.
+// 2. Standalone bright JPEGs: very bright, low-saturation JPEG textures that
+//    are shimmer/glow overlays.
+func filterGlowLayers(meshes []bmd.Mesh, texResolver texture.Resolver) []bmd.Mesh {
+	type meshKey struct {
+		verts, tris int
+	}
+
+	// Group by geometry (vertex count, triangle count)
+	groups := make(map[meshKey][]int)
+	for i := range meshes {
+		k := meshKey{len(meshes[i].Verts), len(meshes[i].Tris)}
+		groups[k] = append(groups[k], i)
+	}
+
+	remove := make(map[int]bool)
+
+	// Pattern 1: JPEG+TGA pairs with same geometry
+	for _, indices := range groups {
+		if len(indices) < 2 {
+			continue
+		}
+		hasJPG := false
+		hasTGA := false
+		for _, i := range indices {
+			ext := strings.ToLower(filepath.Ext(strings.ReplaceAll(meshes[i].TexPath, "\\", "/")))
+			if ext == ".jpg" || ext == ".jpeg" {
+				hasJPG = true
+			} else if ext == ".tga" {
+				hasTGA = true
+			}
+		}
+		if hasJPG && hasTGA {
+			for _, i := range indices {
+				remove[i] = true
+			}
+		}
+	}
+
+	// Pattern 2: Standalone bright JPEG glow layers.
+	// Skip the mesh with the most triangles — that's the primary body mesh
+	// and should never be classified as a glow overlay, even if bright.
+	maxTris := 0
+	maxTrisIdx := -1
+	for i := range meshes {
+		if remove[i] {
+			continue
+		}
+		if len(meshes[i].Tris) > maxTris {
+			maxTris = len(meshes[i].Tris)
+			maxTrisIdx = i
+		}
+	}
+	for i := range meshes {
+		if remove[i] || i == maxTrisIdx {
+			continue
+		}
+		if isBrightGlowJPEG(&meshes[i], texResolver) {
+			remove[i] = true
+		}
+	}
+
+	if len(remove) == 0 {
+		return meshes
+	}
+
+	var result []bmd.Mesh
+	for i := range meshes {
+		if !remove[i] {
+			result = append(result, meshes[i])
+		}
+	}
+	if len(result) == 0 {
+		return meshes // don't filter everything
+	}
+	return result
+}
+
+// isBrightGlowJPEG returns true if a mesh uses a very bright, desaturated
+// JPEG texture — typically a white shimmer/glow overlay that the game renders
+// with additive blending. Without special handling these appear as opaque gray.
+func isBrightGlowJPEG(m *bmd.Mesh, texResolver texture.Resolver) bool {
+	ext := strings.ToLower(filepath.Ext(strings.ReplaceAll(m.TexPath, "\\", "/")))
+	if ext != ".jpg" && ext != ".jpeg" {
+		return false
+	}
+	tex := texResolver.Resolve(m.TexPath)
+	if tex == nil {
+		return false
+	}
+	r, g, b, _ := averageColor(tex)
+	fr, fg, fb := float64(r), float64(g), float64(b)
+	brightness := (fr + fg + fb) / 3
+	maxC := fr
+	if fg > maxC {
+		maxC = fg
+	}
+	if fb > maxC {
+		maxC = fb
+	}
+	minC := fr
+	if fg < minC {
+		minC = fg
+	}
+	if fb < minC {
+		minC = fb
+	}
+	saturation := 0.0
+	if maxC > 0 {
+		saturation = (maxC - minC) / maxC
+	}
+	return brightness > 180 && saturation < 0.25
 }
 
 func averageColor(tex *image.NRGBA) (uint8, uint8, uint8, uint8) {
