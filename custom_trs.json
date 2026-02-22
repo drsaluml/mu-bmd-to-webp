@@ -26,7 +26,8 @@
     "20": { "camera": "fallback", "standardize": false },
     "11": { "camera": "fallback", "display_angle": -90, "bones": true, "override": true },
     "12": { "display_angle": -90, "bones": true, "merge": true },
-    "21": { "rotX": 270, "rotY": -10, "rotZ": 0, "scale": 0.002, "display_angle": -90 }
+    "21": { "rotX": 270, "rotY": -10, "rotZ": 0, "scale": 0.002, "display_angle": -90 },
+    "9":  { "camera": "fallback", "display_angle": -90, "bones": true, "override": true }
   },
   "models": {
     "box": [
@@ -44,7 +45,7 @@
     "flat":    ["warrant.bmd", "Boss_invitationticket.bmd"],
     "potion":  ["IllusionBead_violet.bmd", "EXPpotion_blue.bmd", "Drink00.bmd"],
     "charm":   ["TempleGuard_anvil.bmd"],
-    "oldboot": ["BootMale01.bmd", "BootMale02.bmd", "BootMale03.bmd", "BootMale05.bmd", "BootMale06.bmd", "BootMale07.bmd", "BootMale08.bmd", "BootMale09.bmd"],
+    "oldboot": ["BootMale01.bmd", "BootMale02.bmd", "BootMale03.bmd", "BootMale04.bmd", "BootMale05.bmd", "BootMale06.bmd", "BootMale07.bmd", "BootMale08.bmd", "BootMale09.bmd"],
     "coin7.bmd": { "rotX": -45, "rotY": 10, "rotZ": 0, "camera": "noflip", "standardize": false }
   },
   "items": {
