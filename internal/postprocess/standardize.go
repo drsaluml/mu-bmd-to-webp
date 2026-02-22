@@ -68,9 +68,9 @@ func StandardizeImage(img *image.NRGBA, size int, targetAngleDeg, fillRatio floa
 	// Target angle in image space: negate math convention (y-up → y-down)
 	targetImg := -targetAngleDeg
 
-	// Rotation needed: PIL rotate(θ) rotates CCW, new_angle = old_angle - θ
-	// So θ = old_angle - target_angle
-	pilRotate := currentAngle - targetImg
+	// Rotation needed: rotateImage(θ) rotates CW in image space, new_angle = old_angle + θ
+	// So θ = target_angle - old_angle
+	pilRotate := targetImg - currentAngle
 	// Normalize to [-90, 90] — PCA eigenvector has 180° ambiguity
 	for pilRotate > 90 {
 		pilRotate -= 180
