@@ -142,7 +142,7 @@
     "2_16":  { "rotX": -45, "rotY": 40, "rotZ": 90,"bones": true, "override": true, "fill_ratio": 0.80, "display_angle": -60, "flip": false, "keep_all_meshes": true },
     "2_17-29":  { "rotX": -45, "rotY": 40, "rotZ": 90,"bones": true, "override": true, "fill_ratio": 0.80, "display_angle": -60, "flip": false },
     "2_30":  { "rotX": -45, "rotY": 40, "rotZ": 90,"bones": true, "override": true, "fill_ratio": 0.80, "display_angle": -60, "flip": false, "keep_all_meshes": true },
-    "2_34":  { "rotX": -45, "rotY": 40, "rotZ": 90,"bones": true, "override": true, "fill_ratio": 0.80, "display_angle": -60, "flip": false },
+    "2_31-74":  { "rotX": -45, "rotY": 40, "rotZ": 90,"bones": true, "override": true, "fill_ratio": 0.80, "display_angle": -60, "flip": false },
     
 
     "1_0-2":          { "rotX": 0, "rotY": 18, "rotZ": 140, "scale": 0.0025, "bones": false },

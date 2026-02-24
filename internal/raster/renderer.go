@@ -135,12 +135,13 @@ func isAdditiveTexture(texPath string) bool {
 	return strings.HasSuffix(strings.ToLower(stem), "_r")
 }
 
-// isBillboardJPEG returns true if this mesh is a flat billboard (≤16 verts, ≤8 tris)
+// isBillboardJPEG returns true if this mesh is a flat billboard (≤16 verts, ≤12 tris)
 // using a JPEG texture (no alpha). These are glow/wing/energy overlays that the game
 // renders with additive blending — black pixels add nothing, bright pixels glow.
-// Covers single quads (4v/2t), double quads (8v/4t), and cross-shaped billboards (12v/6t).
+// Covers single quads (4v/2t), double quads (8v/4t), cross-shaped billboards (12v/6t),
+// and small diamond/octahedron shapes (16v/12t).
 func isBillboardJPEG(m *bmd.Mesh) bool {
-	if len(m.Verts) > 16 || len(m.Tris) > 8 || len(m.Verts) == 0 {
+	if len(m.Verts) > 16 || len(m.Tris) > 12 || len(m.Verts) == 0 {
 		return false
 	}
 	ext := strings.ToLower(filepath.Ext(strings.ReplaceAll(m.TexPath, "\\", "/")))
