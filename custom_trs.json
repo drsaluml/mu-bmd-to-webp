@@ -32,6 +32,7 @@
     "0":  { "rotX": -45, "rotY": 40, "rotZ": 0, "scale": 0.0025, "bones": false, "override": true, "fill_ratio": 0.80, "display_angle": -60, "flip": true },
     "1":  { "rotX": 0, "rotY": 18, "rotZ": 0, "scale": 0.0025, "bones": false, "override": true },
     "2":  { "rotX": -45, "rotY": 40, "rotZ": 90, "scale": 0.0025, "bones": true, "override": true, "fill_ratio": 0.80, "display_angle": -60, "flip": true },
+    "3":  { "rotX": -45, "rotY": 40, "rotZ": 90, "scale": 0.0025, "bones": true, "override": true, "fill_ratio": 0.80, "display_angle": -60, "flip": true },
     "13": { "camera": "fallback", "standardize": false, "override": true },
     "14": { "camera": "fallback", "display_angle": -90, "override": true },
     "15": { "rotX": -90, "rotY": 80, "rotZ": 0, "camera": "noflip", "standardize": false, "override": true },
@@ -144,6 +145,8 @@
     "2_30":  { "rotX": -45, "rotY": 40, "rotZ": 90,"bones": true, "override": true, "fill_ratio": 0.80, "display_angle": -60, "flip": false, "keep_all_meshes": true },
     "2_31-74":  { "rotX": -45, "rotY": 40, "rotZ": 90,"bones": true, "override": true, "fill_ratio": 0.80, "display_angle": -60, "flip": false },
     
+    "3_0-1":  { "rotX": -45, "rotY": 40, "rotZ": 90, "scale": 0.0025, "bones": true, "override": true, "fill_ratio": 0.80, "display_angle": -60, "flip": false },
+    "3_3-12":  { "rotX": -45, "rotY": 40, "rotZ": 90, "scale": 0.0025, "bones": true, "override": true, "fill_ratio": 0.80, "display_angle": -60, "flip": false },
 
     "1_0-2":          { "rotX": 0, "rotY": 18, "rotZ": 140, "scale": 0.0025, "bones": false },
     "1_3":          { "rotX": 180, "rotY": 18, "rotZ": 0, "scale": 0.0025, "bones": false },
