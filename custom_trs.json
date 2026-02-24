@@ -102,7 +102,7 @@
     "0_54":          { "rotX": -95, "rotY": 40, "rotZ": 30, "fill_ratio": 0.80, "display_angle": -60, "bones": true, "override": true, "flip": true },
     "0_55":          { "rotX": -95, "rotY": 40, "rotZ": 30, "fill_ratio": 0.80, "display_angle": -60, "bones": true, "override": true, "flip": false },
     "0_56":        {  "rotX": -45, "rotY": 120, "rotZ": 60, "fill_ratio": 0.70, "display_angle": -90, "bones": false, "override": false, "flip": false },
-    "0_59":       { "rotX": -45, "rotY": 30, "rotZ": 35, "fill_ratio": 0.70, "display_angle": -90, "bones": false, "override": false, "flip": true, "keep_all_meshes": true  },
+    "0_59":       { "rotX": 0, "rotY": 0, "rotZ": 0, "fill_ratio": 0.70, "display_angle": -90, "bones": true, "override": false, "flip": false, "camera": "fallback", "keep_all_meshes": true },
     "0_81":         { "rotX": -45, "rotY": 40, "rotZ": 0, "fill_ratio": 0.90, "bones": true, "flip": true },
     "0_82":         { "rotX": -45, "rotY": 40, "rotZ": 0, "fill_ratio": 0.90, "bones": true, "flip": true },
 
