@@ -17,7 +17,7 @@ var effectPatterns = []string{
 	"lightmarks", "light_blue", "light_red",
 	"flame", "energy", "plasma", "shine", "halo", "trail",
 	"gradation", "sdblight", "alpha_line", "4x4", "damage",
-	"ground_wind", "line_of_big",
+	"ground_wind", "ground_star", "line_of_big",
 }
 
 // IsEffectMesh returns true if this mesh is an aura/glow/effect overlay.
