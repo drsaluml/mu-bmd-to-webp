@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>คู่มือ custom_trs.json — MU Online BMD Renderer</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-card: #161b22;
+    --bg-code: #1c2128;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --accent: #58a6ff;
+    --accent2: #3fb950;
+    --accent3: #d2a8ff;
+    --accent4: #f0883e;
+    --accent5: #ff7b72;
+    --accent6: #79c0ff;
+    --tag-bg: #1f6feb22;
+    --tag-border: #1f6feb55;
+    --warn-bg: #f0883e18;
+    --warn-border: #f0883e55;
+    --tip-bg: #3fb95018;
+    --tip-border: #3fb95055;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans Thai', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+
+  /* ── Layout ── */
+  .wrapper {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    background: var(--bg-card);
+    border-right: 1px solid var(--border);
+    padding: 24px 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    overflow-y: auto;
+    z-index: 100;
+  }
+  .sidebar h2 {
+    font-size: 14px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 0 20px;
+    margin-bottom: 12px;
+  }
+  .sidebar a {
+    display: block;
+    padding: 6px 20px 6px 24px;
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 13.5px;
+    border-left: 3px solid transparent;
+    transition: all .15s;
+  }
+  .sidebar a:hover, .sidebar a.active {
+    color: var(--accent);
+    background: #1f6feb11;
+    border-left-color: var(--accent);
+  }
+  .sidebar a.sub {
+    padding-left: 40px;
+    font-size: 12.5px;
+  }
+  .sidebar .logo {
+    padding: 0 20px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .sidebar .logo h1 {
+    font-size: 16px;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .sidebar .logo span {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  /* ── Main ── */
+  .main {
+    margin-left: 280px;
+    flex: 1;
+    padding: 40px 48px 80px;
+    max-width: 960px;
+  }
+
+  /* ── Typography ── */
+  h1 { font-size: 28px; margin-bottom: 8px; color: var(--text); }
+  h2 {
+    font-size: 22px;
+    margin: 48px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  h3 { font-size: 17px; margin: 32px 0 12px; color: var(--accent3); }
+  h4 { font-size: 15px; margin: 24px 0 8px; color: var(--accent6); }
+  p { margin-bottom: 12px; }
+  .subtitle { color: var(--text-dim); margin-bottom: 32px; font-size: 15px; }
+  strong { color: var(--text); }
+
+  /* ── Code ── */
+  code {
+    font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
+    background: var(--bg-code);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--accent6);
+  }
+  pre {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    overflow-x: auto;
+    margin: 12px 0 16px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  pre code {
+    background: none;
+    padding: 0;
+    color: var(--text);
+  }
+  /* JSON syntax */
+  .json-key { color: var(--accent6); }
+  .json-str { color: var(--accent2); }
+  .json-num { color: var(--accent3); }
+  .json-bool { color: var(--accent4); }
+  .json-comment { color: var(--text-dim); font-style: italic; }
+  .code-comment { color: var(--text-dim); }
+
+  /* ── Tables ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 20px;
+    font-size: 13.5px;
+  }
+  th {
+    background: var(--bg-code);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text);
+    border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+  }
+  td {
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:hover td { background: #1f6feb08; }
+
+  /* ── Callouts ── */
+  .callout {
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 13.5px;
+    line-height: 1.6;
+  }
+  .callout-warn {
+    background: var(--warn-bg);
+    border: 1px solid var(--warn-border);
+  }
+  .callout-warn::before {
+    content: "! คำเตือน";
+    display: block;
+    font-weight: 700;
+    color: var(--accent4);
+    margin-bottom: 4px;
+  }
+  .callout-tip {
+    background: var(--tip-bg);
+    border: 1px solid var(--tip-border);
+  }
+  .callout-tip::before {
+    content: "Tip";
+    display: block;
+    font-weight: 700;
+    color: var(--accent2);
+    margin-bottom: 4px;
+  }
+  .callout-info {
+    background: var(--tag-bg);
+    border: 1px solid var(--tag-border);
+  }
+  .callout-info::before {
+    content: "Info";
+    display: block;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  /* ── Priority chain ── */
+  .priority-chain {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 20px 0;
+    flex-wrap: wrap;
+  }
+  .priority-chain .node {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 18px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .priority-chain .node.high { border-color: var(--accent2); color: var(--accent2); }
+  .priority-chain .node.med { border-color: var(--accent); color: var(--accent); }
+  .priority-chain .node.low { border-color: var(--accent4); color: var(--accent4); }
+  .priority-chain .node.base { border-color: var(--text-dim); color: var(--text-dim); }
+  .priority-chain .arrow {
+    font-size: 18px;
+    color: var(--text-dim);
+    padding: 0 6px;
+  }
+  .priority-chain .label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 400;
+    margin-top: 2px;
+  }
+
+  /* ── Tags / Badges ── */
+  .tag {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+    vertical-align: middle;
+  }
+  .tag-float { background: #d2a8ff22; color: var(--accent3); border: 1px solid #d2a8ff44; }
+  .tag-bool  { background: #f0883e22; color: var(--accent4); border: 1px solid #f0883e44; }
+  .tag-str   { background: #3fb95022; color: var(--accent2); border: 1px solid #3fb95044; }
+  .tag-sec   { background: #ff7b7222; color: var(--accent5); border: 1px solid #ff7b7244; }
+
+  /* ── Scenario cards ── */
+  .scenario {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin: 20px 0;
+  }
+  .scenario h4 {
+    margin: 0 0 8px;
+    color: var(--accent);
+    font-size: 16px;
+  }
+  .scenario .problem {
+    color: var(--accent5);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .scenario .solution {
+    color: var(--accent2);
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .scenario ul {
+    margin: 8px 0 0 20px;
+    font-size: 13.5px;
+  }
+  .scenario li { margin-bottom: 4px; }
+
+  /* ── Value diagrams ── */
+  .val-diagram {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0 16px;
+  }
+  .val-diagram .chip {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12.5px;
+    font-family: 'Fira Code', monospace;
+  }
+  .val-diagram .chip .label { color: var(--text-dim); font-size: 11px; display: block; }
+  .val-diagram .chip .val { color: var(--accent3); font-weight: 600; }
+
+  /* ── Lists ── */
+  ul, ol { margin: 8px 0 16px 24px; }
+  li { margin-bottom: 6px; }
+
+  /* ── Section mode diagram ── */
+  .mode-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .mode-card {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .mode-card h5 {
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+  .mode-card.m-default h5 { color: var(--text-dim); }
+  .mode-card.m-override h5 { color: var(--accent4); }
+  .mode-card.m-merge h5 { color: var(--accent2); }
+  .mode-card p { font-size: 12.5px; color: var(--text-dim); margin: 0; }
+
+  /* ── Scroll top ── */
+  .scroll-top {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,.4);
+    z-index: 200;
+  }
+  .scroll-top.show { display: flex; }
+
+  /* ── Mobile ── */
+  @media (max-width: 800px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; padding: 24px 16px 60px; }
+    .mode-grid { grid-template-columns: 1fr; }
+    .priority-chain { gap: 4px; }
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- ── Sidebar ── -->
+<div class="wrapper">
+<nav class="sidebar">
+  <div class="logo">
+    <h1>custom_trs.json</h1>
+    <span>MU Online BMD &rarr; WebP Renderer</span>
+  </div>
+  <h2>สารบัญ</h2>
+  <a href="#structure">1. โครงสร้างไฟล์</a>
+  <a href="#priority">2. ลำดับความสำคัญ</a>
+  <a href="#variables">3. ตัวแปรทั้งหมด</a>
+  <a href="#var-rotation" class="sub">3.1 Rotation</a>
+  <a href="#var-scale" class="sub">3.2 Scale</a>
+  <a href="#var-camera" class="sub">3.3 Camera</a>
+  <a href="#var-bones" class="sub">3.4 Bones</a>
+  <a href="#var-pca" class="sub">3.5 PCA / Display</a>
+  <a href="#var-flip-canvas" class="sub">3.6 Flip Canvas</a>
+  <a href="#var-projection" class="sub">3.7 Projection</a>
+  <a href="#var-keepmesh" class="sub">3.8 Keep All Meshes</a>
+  <a href="#var-section-only" class="sub">3.9 Section-Only</a>
+  <a href="#sec-presets">4. ส่วน presets</a>
+  <a href="#sec-sections">5. ส่วน sections</a>
+  <a href="#sec-models">6. ส่วน models</a>
+  <a href="#sec-items">7. ส่วน items</a>
+  <a href="#scenarios">8. ตัวอย่างจริง</a>
+  <a href="#quickref">สรุปตัวแปร</a>
+</nav>
+
+<!-- ── Main Content ── -->
+<main class="main">
+
+<!-- ════════════════════════════════════ HEADER ════════════════════════════════════ -->
+<h1>คู่มือ custom_trs.json</h1>
+<p class="subtitle">คู่มืออธิบายตัวแปรทั้งหมดพร้อมตัวอย่างการใช้งานจริง &mdash; สำหรับโปรเจกต์ MU Online BMD &rarr; WebP Renderer</p>
+
+<!-- ════════════════════════════════════ 1. STRUCTURE ════════════════════════════════════ -->
+<h2 id="structure">1. โครงสร้างไฟล์</h2>
+<p>ไฟล์ <code>custom_trs.json</code> มี 4 ส่วนหลัก:</p>
+<pre><code>{
+  <span class="json-key">"presets"</span>:  { ... },
+  <span class="json-key">"sections"</span>: { ... },
+  <span class="json-key">"models"</span>:   { ... },
+  <span class="json-key">"items"</span>:    { ... }
+}</code></pre>
+
+<table>
+  <thead><tr><th>ส่วน</th><th>หน้าที่</th></tr></thead>
+  <tbody>
+    <tr><td><code>presets</code></td><td>ประกาศค่าตั้งต้นที่ใช้ซ้ำได้ (เหมือนตัวแปรกลาง)</td></tr>
+    <tr><td><code>sections</code></td><td>กำหนดค่าทั้ง section (เช่น section 0 = ดาบทุกเล่ม)</td></tr>
+    <tr><td><code>models</code></td><td>กำหนดค่าตาม BMD model file (ข้าม section ได้)</td></tr>
+    <tr><td><code>items</code></td><td>กำหนดค่าเฉพาะ item (ละเอียดที่สุด, ชนะทุกอย่าง)</td></tr>
+  </tbody>
+</table>
+
+<!-- ════════════════════════════════════ 2. PRIORITY ════════════════════════════════════ -->
+<h2 id="priority">2. ลำดับความสำคัญ (Priority)</h2>
+
+<div class="priority-chain">
+  <div class="node high">items<span class="label">สูงสุด</span></div>
+  <span class="arrow">&gt;</span>
+  <div class="node med">models</div>
+  <span class="arrow">&gt;</span>
+  <div class="node med">sections</div>
+  <span class="arrow">&gt;</span>
+  <div class="node low">binary TRS</div>
+  <span class="arrow">&gt;</span>
+  <div class="node base">default<span class="label">ต่ำสุด</span></div>
+</div>
+
+<ul>
+  <li>ถ้า item มีค่าใน <code>items</code> &rarr; ใช้ค่านั้น (ไม่สนค่าจาก models/sections/binary)</li>
+  <li>ถ้าไม่มีใน <code>items</code> แต่มีใน <code>models</code> &rarr; ใช้ค่าจาก models</li>
+  <li>ถ้าไม่มีใน <code>models</code> แต่ section มี config &rarr; ขึ้นกับ mode (override / merge / default)</li>
+  <li>ถ้าไม่มีอะไรเลย &rarr; ใช้ binary TRS จาก <code>itemtrsdata.bmd</code></li>
+  <li>ถ้าไม่มี binary TRS ด้วย &rarr; ใช้ค่า default ของระบบ</li>
+</ul>
+
+<div class="callout callout-warn">
+  <code>items</code> <strong>แทนที่ทั้งหมด</strong> ไม่ merge &mdash; ต้องใส่ทุกค่าที่ต้องการ (เช่น <code>camera</code>, <code>bones</code>) เมื่อ override ด้วย per-item
+</div>
+
+<!-- ════════════════════════════════════ 3. VARIABLES ════════════════════════════════════ -->
+<h2 id="variables">3. ตัวแปรทั้งหมด</h2>
+
+<!-- ── 3.1 Rotation ── -->
+<h3 id="var-rotation">3.1 ตัวแปรหมุนโมเดล 3 มิติ (Rotation)</h3>
+
+<table>
+  <thead><tr><th>ตัวแปร</th><th>ชนิด</th><th>ค่าเริ่มต้น</th><th>คำอธิบาย</th></tr></thead>
+  <tbody>
+    <tr><td><code>rotX</code></td><td><span class="tag tag-float">float</span></td><td>0</td><td>หมุนรอบแกน X (องศา) &mdash; เอียงหน้า/หลัง</td></tr>
+    <tr><td><code>rotY</code></td><td><span class="tag tag-float">float</span></td><td>0</td><td>หมุนรอบแกน Y (องศา) &mdash; หมุนซ้าย/ขวา</td></tr>
+    <tr><td><code>rotZ</code></td><td><span class="tag tag-float">float</span></td><td>0</td><td>หมุนรอบแกน Z (องศา) &mdash; เอียงเฉียง</td></tr>
+  </tbody>
+</table>
+
+<p>ลำดับการหมุน: <strong>Rz @ Ry @ Rx</strong> (extrinsic ZYX) ตาม MU Online</p>
+
+<div class="val-diagram">
+  <div class="chip"><span class="label">rotX</span><span class="val">-90</span> หงายขึ้น</div>
+  <div class="chip"><span class="label">rotX</span><span class="val">180</span> กลับหัว</div>
+  <div class="chip"><span class="label">rotX</span><span class="val">270</span> = -90</div>
+  <div class="chip"><span class="label">rotY</span><span class="val">270</span> CORRECTION</div>
+  <div class="chip"><span class="label">rotY</span><span class="val">90</span> FALLBACK</div>
+  <div class="chip"><span class="label">rotY</span><span class="val">0</span> NOFLIP</div>
+</div>
+
+<h4>ตัวอย่าง: ดาบมาตรฐาน</h4>
+<pre><code>{ <span class="json-key">"rotX"</span>: <span class="json-num">180</span>, <span class="json-key">"rotY"</span>: <span class="json-num">270</span>, <span class="json-key">"rotZ"</span>: <span class="json-num">15</span> }</code></pre>
+<ul>
+  <li><code>rotX: 180</code> = พลิกใบมีดให้ชี้ขึ้น</li>
+  <li><code>rotY: 270</code> = หมุนเข้ามุม CORRECTION camera</li>
+  <li><code>rotZ: 15</code> = เอียงเฉียงเล็กน้อย</li>
+</ul>
+
+<h4>ตัวอย่าง: ปีก</h4>
+<pre><code>{ <span class="json-key">"rotX"</span>: <span class="json-num">270</span>, <span class="json-key">"rotY"</span>: <span class="json-num">-10</span>, <span class="json-key">"rotZ"</span>: <span class="json-num">0</span> }</code></pre>
+<ul>
+  <li><code>rotX: 270</code> = ปีกกางแนวนอน</li>
+  <li><code>rotY: -10</code> = หมุนเล็กน้อยให้เห็นมิติ</li>
+</ul>
+
+<!-- ── 3.2 Scale ── -->
+<h3 id="var-scale">3.2 ขนาดโมเดล (Scale)</h3>
+<table>
+  <thead><tr><th>ตัวแปร</th><th>ชนิด</th><th>ค่าเริ่มต้น</th><th>คำอธิบาย</th></tr></thead>
+  <tbody>
+    <tr><td><code>scale</code></td><td><span class="tag tag-float">float</span></td><td>0.0025</td><td>ตัวคูณขนาดโมเดล</td></tr>
+  </tbody>
+</table>
+
+<div class="val-diagram">
+  <div class="chip"><span class="label">scale</span><span class="val">0.002</span> เล็กลง 20%</div>
+  <div class="chip"><span class="label">scale</span><span class="val">0.0025</span> ปกติ</div>
+  <div class="chip"><span class="label">scale</span><span class="val">0.0035</span> ใหญ่ขึ้น 40%</div>
+  <div class="chip"><span class="label">scale</span><span class="val">0.0055</span> ใหญ่ขึ้น 120%</div>
+</div>
+
+<h4>ตัวอย่าง: เสื้อคลุม (model ใหญ่ ต้องย่อ)</h4>
+<pre><code>{ <span class="json-key">"rotX"</span>: <span class="json-num">270</span>, <span class="json-key">"rotY"</span>: <span class="json-num">-10</span>, <span class="json-key">"scale"</span>: <span class="json-num">0.002</span>, <span class="json-key">"display_angle"</span>: <span class="json-num">-90</span> }</code></pre>
+
+<!-- ── 3.3 Camera ── -->
+<h3 id="var-camera">3.3 กล้อง (Camera)</h3>
+<table>
+  <thead><tr><th>ตัวแปร</th><th>ชนิด</th><th>ค่าที่รับ</th><th>คำอธิบาย</th></tr></thead>
+  <tbody>
+    <tr><td><code>camera</code></td><td><span class="tag tag-str">string</span></td><td><code>"noflip"</code> / <code>"correction"</code> / <code>"fallback"</code></td><td>บังคับใช้กล้องแบบระบุ</td></tr>
+  </tbody>
+</table>
+
+<p><strong>3 โหมดกล้อง:</strong></p>
+<table>
+  <thead><tr><th>กล้อง</th><th>สูตร</th><th>เหมาะกับ</th><th>ลักษณะ</th></tr></thead>
+  <tbody>
+    <tr><td><code>correction</code></td><td>TRS_CORRECTION @ trs_rot</td><td>อาวุธ (rotY~270)</td><td>ปรับมุมตาม TRS ของอาวุธ</td></tr>
+    <tr><td><code>fallback</code></td><td>VIEW_FALLBACK (มุมคงที่)</td><td>items ทั่วไป, muun, pets</td><td>กล้องตายตัว ไม่สนค่า rot</td></tr>
+    <tr><td><code>noflip</code></td><td>NOFLIP_CAM @ trs_rot</td><td>ปีก, เกราะ, กล่อง</td><td>ไม่พลิกโมเดล ควบคุม rotation เอง</td></tr>
+  </tbody>
+</table>
+
+<div class="callout callout-info">
+  ถ้าไม่ระบุ <code>camera</code> ระบบเลือกอัตโนมัติจาก <code>rotY</code>:<br>
+  &bull; <code>rotY</code> ห่างจาก 270&deg; ไม่เกิน 45&deg; &rarr; CORRECTION<br>
+  &bull; <code>rotY</code> ห่างจาก 90&deg; ไม่เกิน 45&deg; &rarr; FALLBACK<br>
+  &bull; อื่นๆ &rarr; NOFLIP
+</div>
+
+<h4>ตัวอย่าง: กล่องไอเทม (ควบคุมมุมเอง)</h4>
+<pre><code>{ <span class="json-key">"rotX"</span>: <span class="json-num">-75</span>, <span class="json-key">"rotY"</span>: <span class="json-num">15</span>, <span class="json-key">"rotZ"</span>: <span class="json-num">3.5</span>, <span class="json-key">"camera"</span>: <span class="json-str">"noflip"</span>, <span class="json-key">"standardize"</span>: <span class="json-bool">false</span> }</code></pre>
+
+<h4>ตัวอย่าง: Muun pets (กล้องตายตัว)</h4>
+<pre><code>{ <span class="json-key">"camera"</span>: <span class="json-str">"fallback"</span>, <span class="json-key">"standardize"</span>: <span class="json-bool">false</span> }</code></pre>
+
+<!-- ── 3.4 Bones ── -->
+<h3 id="var-bones">3.4 กระดูก (Bones)</h3>
+<table>
+  <thead><tr><th>ตัวแปร</th><th>ชนิด</th><th>ค่าเริ่มต้น</th><th>คำอธิบาย</th></tr></thead>
+  <tbody>
+    <tr><td><code>bones</code></td><td><span class="tag tag-bool">bool</span></td><td>อัตโนมัติ</td><td>บังคับเปิด/ปิด bone transforms</td></tr>
+  </tbody>
+</table>
+
+<p><strong>พฤติกรรมอัตโนมัติ</strong> (เมื่อไม่ระบุ):</p>
+<ul>
+  <li>binary TRS &rarr; <code>false</code> (ข้ามกระดูก เพราะ TRS ปรับแล้ว)</li>
+  <li>custom TRS &rarr; <code>true</code> (ใช้กระดูกเพื่อประกอบ mesh)</li>
+  <li>ไม่มี TRS &rarr; <code>true</code></li>
+</ul>
+
+<table>
+  <thead><tr><th>เมื่อไหร่ใช้</th><th>ค่า</th><th>เหตุผล</th></tr></thead>
+  <tbody>
+    <tr><td>รองเท้า / กางเกง</td><td><code>true</code></td><td>mesh ไม่ประกอบโดยไม่มี bones (ขาแยกจากกัน)</td></tr>
+    <tr><td>ปีก / เสื้อคลุม</td><td><code>true</code></td><td>bones ทำให้ mesh กางออก (ไม่มี = เส้นบาง)</td></tr>
+    <tr><td>ถุงมือ</td><td><code>false</code></td><td>bones บีบ mesh เป็นท่าสวม (เล็กลง)</td></tr>
+    <tr><td>อาวุธ</td><td><code>false</code></td><td>bones หมุนด้ามจับเป็นท่าถือ (ผิด)</td></tr>
+  </tbody>
+</table>
+
+<h4>ตัวอย่าง: รองเท้า (ต้องประกอบ mesh)</h4>
+<pre><code>{ <span class="json-key">"camera"</span>: <span class="json-str">"fallback"</span>, <span class="json-key">"display_angle"</span>: <span class="json-num">-90</span>, <span class="json-key">"bones"</span>: <span class="json-bool">true</span>, <span class="json-key">"override"</span>: <span class="json-bool">true</span> }</code></pre>
+
+<h4>ตัวอย่าง: ดาบ (ห้ามใช้ bones)</h4>
+<pre><code>{ <span class="json-key">"rotX"</span>: <span class="json-num">-45</span>, <span class="json-key">"rotY"</span>: <span class="json-num">40</span>, <span class="json-key">"bones"</span>: <span class="json-bool">false</span>, <span class="json-key">"flip"</span>: <span class="json-bool">true</span> }</code></pre>
+
+<div class="callout callout-warn">
+  per-item override <strong>ไม่ inherit</strong> <code>bones</code> จาก section &mdash; ต้องใส่เองทุกครั้ง!
+</div>
+
+<!-- ── 3.5 PCA ── -->
+<h3 id="var-pca">3.5 การจัดภาพ PCA (Standardize / Display Angle)</h3>
+<table>
+  <thead><tr><th>ตัวแปร</th><th>ชนิด</th><th>ค่าเริ่มต้น</th><th>คำอธิบาย</th></tr></thead>
+  <tbody>
+    <tr><td><code>standardize</code></td><td><span class="tag tag-bool">bool</span></td><td>true</td><td>เปิด/ปิดการจัดภาพอัตโนมัติด้วย PCA</td></tr>
+    <tr><td><code>display_angle</code></td><td><span class="tag tag-float">float</span></td><td>-45</td><td>มุมเป้าหมาย PCA (องศา จากแนวนอน)</td></tr>
+    <tr><td><code>fill_ratio</code></td><td><span class="tag tag-float">float</span></td><td>0.70</td><td>สัดส่วนเติมเต็มผ้าใบ (0.0 &ndash; 1.0)</td></tr>
+    <tr><td><code>flip</code></td><td><span class="tag tag-bool">bool</span></td><td>false</td><td>สลับทิศ PCA (ปลาย &harr; ด้าม)</td></tr>
+  </tbody>
+</table>
+
+<h4>standardize</h4>
+<p>เปิด/ปิดระบบจัดภาพอัตโนมัติ PCA &mdash; หมุนภาพ 2D ให้ item อยู่ในมุมสม่ำเสมอ</p>
+<div class="val-diagram">
+  <div class="chip"><span class="val">true</span> PCA จัดมุม + ขยาย/ย่อพอดี (default)</div>
+  <div class="chip"><span class="val">false</span> ใช้ภาพจากกล้องตรงๆ ไม่หมุน</div>
+</div>
+<p>ใช้ <code>false</code> เมื่อ: กล้องตายตัว (fallback) ดูดีอยู่แล้ว เช่น muuns, jewels, misc items</p>
+
+<h4>display_angle</h4>
+<p>มุมเป้าหมายของ PCA &mdash; กำหนดว่า item เอียงกี่องศาในภาพสุดท้าย</p>
+<div class="val-diagram">
+  <div class="chip"><span class="val">-90</span> ตั้งตรง (รองเท้า, ปีก)</div>
+  <div class="chip"><span class="val">-60</span> เอียงเล็กน้อย</div>
+  <div class="chip"><span class="val">-45</span> 45&deg; (default อาวุธ)</div>
+  <div class="chip"><span class="val">-30</span> เอียงมาก</div>
+  <div class="chip"><span class="val">0</span> แนวนอน</div>
+</div>
+
+<div class="callout callout-tip">
+  <strong>สูตรแปลง:</strong> ต้องการเอียง N&deg; จากแนวตั้ง &rarr; <code>display_angle = -(90 - N)</code><br>
+  เช่น เอียง 60&deg; จากตั้งตรง &rarr; <code>display_angle = -(90-60) = -30</code>
+</div>
+
+<h4>fill_ratio</h4>
+<p>สัดส่วนที่ item กินพื้นที่ผ้าใบ 256&times;256</p>
+<div class="val-diagram">
+  <div class="chip"><span class="val">0.50</span> กิน 50% (เล็ก)</div>
+  <div class="chip"><span class="val">0.70</span> กิน 70% (default)</div>
+  <div class="chip"><span class="val">0.90</span> กิน 90% (เกือบเต็ม)</div>
+</div>
+
+<h4>flip</h4>
+<p>สลับทิศทาง PCA &mdash; ปลายดาบ &harr; ด้ามจับ</p>
+<div class="val-diagram">
+  <div class="chip"><span class="val">false</span> PCA เลือกทิศปกติ (default)</div>
+  <div class="chip"><span class="val">true</span> กลับทิศ (ปลายสลับด้าม)</div>
+</div>
+<p>ใช้เมื่อ: PCA เลือกทิศผิด (ปลายดาบอยู่ล่างแทนที่จะอยู่บน)</p>
+
+<!-- ── 3.6 Flip Canvas ── -->
+<h3 id="var-flip-canvas">3.6 การพลิกภาพ (Flip Canvas)</h3>
+<table>
+  <thead><tr><th>ตัวแปร</th><th>ชนิด</th><th>ค่าเริ่มต้น</th><th>คำอธิบาย</th></tr></thead>
+  <tbody>
+    <tr><td><code>flip_canvas</code></td><td><span class="tag tag-bool">bool</span></td><td>false</td><td>พลิกภาพซ้าย-ขวา (mirror horizontal) หลัง post-process</td></tr>
+  </tbody>
+</table>
+<p>ใช้เมื่อ: render ออกมากลับด้านกับภาพอ้างอิง (BMD-viewer)</p>
+
+<h4>ตัวอย่าง: เครื่องรางที่ render กลับด้าน</h4>
+<pre><code>{ <span class="json-key">"camera"</span>: <span class="json-str">"fallback"</span>, <span class="json-key">"standardize"</span>: <span class="json-bool">false</span>, <span class="json-key">"flip_canvas"</span>: <span class="json-bool">true</span> }</code></pre>
+
+<div class="callout callout-info">
+  <code>flip</code> สลับทิศ PCA (2D rotation) &mdash; <code>flip_canvas</code> พลิกภาพจริงๆ (mirror horizontal) ต่างกัน!
+</div>
+
+<!-- ── 3.7 Projection ── -->
+<h3 id="var-projection">3.7 การฉาย (Projection)</h3>
+<table>
+  <thead><tr><th>ตัวแปร</th><th>ชนิด</th><th>ค่าเริ่มต้น</th><th>คำอธิบาย</th></tr></thead>
+  <tbody>
+    <tr><td><code>perspective</code></td><td><span class="tag tag-bool">bool</span></td><td>false</td><td>เปิด perspective projection (มุมมอง 3 มิติ)</td></tr>
+    <tr><td><code>fov</code></td><td><span class="tag tag-float">float</span></td><td>75</td><td>มุมมองกว้าง (องศา) &mdash; ใช้กับ perspective เท่านั้น</td></tr>
+  </tbody>
+</table>
+
+<p>ปกติระบบใช้ orthographic (ภาพแบน ไม่มีระยะใกล้/ไกล) เปิด perspective เมื่อ: โมเดลแบน low-poly ที่ orthographic ทำให้เป็นเส้นตรง</p>
+
+<div class="val-diagram">
+  <div class="chip"><span class="label">fov</span><span class="val">45</span> ซูมเข้า</div>
+  <div class="chip"><span class="label">fov</span><span class="val">75</span> ปกติ (default)</div>
+  <div class="chip"><span class="label">fov</span><span class="val">90</span> มุมกว้างมาก</div>
+</div>
+
+<h4>ตัวอย่าง: ขวานแบน (Crescent Axe)</h4>
+<pre><code>{
+  <span class="json-key">"rotX"</span>: <span class="json-num">-5</span>, <span class="json-key">"rotY"</span>: <span class="json-num">40</span>, <span class="json-key">"rotZ"</span>: <span class="json-num">40</span>,
+  <span class="json-key">"camera"</span>: <span class="json-str">"noflip"</span>,
+  <span class="json-key">"perspective"</span>: <span class="json-bool">true</span>, <span class="json-key">"fov"</span>: <span class="json-num">45</span>
+}</code></pre>
+
+<!-- ── 3.8 Keep All Meshes ── -->
+<h3 id="var-keepmesh">3.8 เก็บ mesh ทั้งหมด (Keep All Meshes)</h3>
+<table>
+  <thead><tr><th>ตัวแปร</th><th>ชนิด</th><th>ค่าเริ่มต้น</th><th>คำอธิบาย</th></tr></thead>
+  <tbody>
+    <tr><td><code>keep_all_meshes</code></td><td><span class="tag tag-bool">bool</span></td><td>false</td><td>ข้าม effect mesh filter (เก็บ glow/aura/gradient)</td></tr>
+  </tbody>
+</table>
+
+<p>ปกติระบบกรอง mesh ที่เป็น effect ออก (ออร่า, เรืองแสง, gradient) เปิดเมื่อ: item ที่ mesh หลักถูกกรองผิด (หายไป)</p>
+
+<h4>ตัวอย่าง: Guardian Angel (mesh หลักถูกกรองเป็น effect)</h4>
+<pre><code>{ <span class="json-key">"camera"</span>: <span class="json-str">"fallback"</span>, <span class="json-key">"standardize"</span>: <span class="json-bool">false</span>, <span class="json-key">"keep_all_meshes"</span>: <span class="json-bool">true</span> }</code></pre>
+
+<!-- ── 3.9 Section-Only ── -->
+<h3 id="var-section-only">3.9 ตัวแปรเฉพาะ section (Section-Only)</h3>
+<table>
+  <thead><tr><th>ตัวแปร</th><th>ชนิด</th><th>ค่าเริ่มต้น</th><th>คำอธิบาย</th></tr></thead>
+  <tbody>
+    <tr><td><code>override</code></td><td><span class="tag tag-sec">sections only</span></td><td>false</td><td>แทนที่ binary TRS ทั้งหมดในหัวข้อนี้</td></tr>
+    <tr><td><code>merge</code></td><td><span class="tag tag-sec">sections only</span></td><td>false</td><td>merge เฉพาะค่าที่ระบุเข้า binary TRS ที่มีอยู่</td></tr>
+  </tbody>
+</table>
+
+<p><strong>3 โหมดของ section:</strong></p>
+
+<div class="mode-grid">
+  <div class="mode-card m-default">
+    <h5>Default</h5>
+    <p>ไม่มี override/merge<br>ใส่ค่าเฉพาะ item ที่ <strong>ไม่มี</strong> binary TRS<br>item ที่มี binary TRS ไม่เปลี่ยนแปลง</p>
+  </div>
+  <div class="mode-card m-override">
+    <h5>override = true</h5>
+    <p><strong>แทนที่</strong> binary TRS ทุก item<br>ต้องการเปลี่ยนทั้ง section เหมือนกัน</p>
+  </div>
+  <div class="mode-card m-merge">
+    <h5>merge = true</h5>
+    <p><strong>merge</strong> เฉพาะค่าที่ระบุเข้า binary TRS<br>เก็บ rotation เดิม เพิ่มบาง field</p>
+  </div>
+</div>
+
+<h4>ตัวอย่าง override: section 11 (รองเท้า)</h4>
+<pre><code><span class="json-key">"11"</span>: { <span class="json-key">"camera"</span>: <span class="json-str">"fallback"</span>, <span class="json-key">"display_angle"</span>: <span class="json-num">-90</span>, <span class="json-key">"bones"</span>: <span class="json-bool">true</span>, <span class="json-key">"override"</span>: <span class="json-bool">true</span> }</code></pre>
+<p>&rarr; item ทุกตัวใน sec 11 ใช้ fallback camera + ตั้งตรง + ใช้ bones (ไม่ว่าจะมี binary TRS หรือไม่)</p>
+
+<h4>ตัวอย่าง merge: section 12 (ปีก/pets)</h4>
+<pre><code><span class="json-key">"12"</span>: { <span class="json-key">"display_angle"</span>: <span class="json-num">-90</span>, <span class="json-key">"bones"</span>: <span class="json-bool">true</span>, <span class="json-key">"merge"</span>: <span class="json-bool">true</span> }</code></pre>
+<p>&rarr; item ที่มี binary TRS: เก็บ rotX/rotY/rotZ/scale เดิม + เพิ่ม display_angle=-90, bones=true<br>
+&rarr; item ที่ไม่มี binary TRS: สร้างใหม่ด้วยค่า section config</p>
+
+<h4>ตัวอย่าง default: section 19</h4>
+<pre><code><span class="json-key">"19"</span>: { <span class="json-key">"camera"</span>: <span class="json-str">"fallback"</span>, <span class="json-key">"standardize"</span>: <span class="json-bool">false</span> }</code></pre>
+<p>&rarr; item ที่มี binary TRS: <strong>ไม่เปลี่ยนแปลง</strong><br>
+&rarr; item ที่ไม่มี binary TRS: ใช้ fallback camera + ปิด PCA</p>
+
+<!-- ════════════════════════════════════ 4. PRESETS ════════════════════════════════════ -->
+<h2 id="sec-presets">4. ส่วน presets</h2>
+<p>ประกาศค่าตั้งต้นที่ใช้ซ้ำหลายที่ &mdash; ลดการพิมพ์ซ้ำ</p>
+
+<pre><code><span class="json-key">"presets"</span>: {
+  <span class="json-key">"box"</span>: {
+    <span class="json-key">"rotX"</span>: <span class="json-num">-75</span>, <span class="json-key">"rotY"</span>: <span class="json-num">15</span>, <span class="json-key">"rotZ"</span>: <span class="json-num">3.5</span>,
+    <span class="json-key">"camera"</span>: <span class="json-str">"noflip"</span>, <span class="json-key">"standardize"</span>: <span class="json-bool">false</span>
+  },
+  <span class="json-key">"jewel"</span>: {
+    <span class="json-key">"rotX"</span>: <span class="json-num">-90</span>, <span class="json-key">"rotY"</span>: <span class="json-num">0</span>,
+    <span class="json-key">"camera"</span>: <span class="json-str">"noflip"</span>, <span class="json-key">"standardize"</span>: <span class="json-bool">false</span>
+  },
+  <span class="json-key">"potion"</span>: {
+    <span class="json-key">"rotX"</span>: <span class="json-num">-70</span>, <span class="json-key">"rotY"</span>: <span class="json-num">0</span>,
+    <span class="json-key">"camera"</span>: <span class="json-str">"noflip"</span>, <span class="json-key">"standardize"</span>: <span class="json-bool">false</span>
+  },
+  <span class="json-key">"parchment"</span>: {
+    <span class="json-key">"camera"</span>: <span class="json-str">"fallback"</span>, <span class="json-key">"standardize"</span>: <span class="json-bool">false</span>
+  }
+}</code></pre>
+
+<p><strong>การใช้งาน:</strong> อ้างอิงด้วยชื่อ (string) ในส่วน sections, models, หรือ items:</p>
+<pre><code><span class="json-key">"items"</span>: {
+  <span class="json-key">"14_1-9"</span>:   <span class="json-str">"potion"</span>,   <span class="code-comment">// item 14_1 ถึง 14_9 ใช้ค่าจาก preset potion</span>
+  <span class="json-key">"14_13-14"</span>: <span class="json-str">"jewel"</span>     <span class="code-comment">// item 14_13 ถึง 14_14 ใช้ค่าจาก preset jewel</span>
+}</code></pre>
+
+<!-- ════════════════════════════════════ 5. SECTIONS ════════════════════════════════════ -->
+<h2 id="sec-sections">5. ส่วน sections</h2>
+<p>กำหนดค่าทั้ง section &mdash; มีผลกับ item ทุกตัวใน section นั้น</p>
+
+<pre><code><span class="json-key">"sections"</span>: {
+  <span class="json-key">"9"</span>:  { <span class="json-key">"camera"</span>: <span class="json-str">"fallback"</span>, <span class="json-key">"display_angle"</span>: <span class="json-num">-90</span>, <span class="json-key">"bones"</span>: <span class="json-bool">true</span>, <span class="json-key">"override"</span>: <span class="json-bool">true</span> },
+  <span class="json-key">"11"</span>: { <span class="json-key">"camera"</span>: <span class="json-str">"fallback"</span>, <span class="json-key">"display_angle"</span>: <span class="json-num">-90</span>, <span class="json-key">"bones"</span>: <span class="json-bool">true</span>, <span class="json-key">"override"</span>: <span class="json-bool">true</span> },
+  <span class="json-key">"12"</span>: { <span class="json-key">"display_angle"</span>: <span class="json-num">-90</span>, <span class="json-key">"bones"</span>: <span class="json-bool">true</span>, <span class="json-key">"merge"</span>: <span class="json-bool">true</span> },
+  <span class="json-key">"13"</span>: { <span class="json-key">"camera"</span>: <span class="json-str">"fallback"</span>, <span class="json-key">"standardize"</span>: <span class="json-bool">false</span>, <span class="json-key">"override"</span>: <span class="json-bool">true</span> },
+  <span class="json-key">"16"</span>: { <span class="json-key">"camera"</span>: <span class="json-str">"fallback"</span>, <span class="json-key">"standardize"</span>: <span class="json-bool">false</span>, <span class="json-key">"override"</span>: <span class="json-bool">true</span> }
+}</code></pre>
+
+<table>
+  <thead><tr><th>Section</th><th>ประเภท</th><th>โหมด</th><th>เหตุผล</th></tr></thead>
+  <tbody>
+    <tr><td>0</td><td>ดาบ</td><td>override</td><td>re-tuning มุมใหม่ 60&deg;</td></tr>
+    <tr><td>1</td><td>ขวาน</td><td>override</td><td>custom rotation + per-item</td></tr>
+    <tr><td>9</td><td>กางเกง</td><td>override</td><td>bones=true ประกอบ mesh ขา</td></tr>
+    <tr><td>11</td><td>รองเท้า</td><td>override</td><td>bones=true ประกอบ mesh เท้า</td></tr>
+    <tr><td>12</td><td>ปีก / pets</td><td>merge</td><td>เพิ่ม bones + DA เข้า binary TRS</td></tr>
+    <tr><td>13</td><td>อัญมณี</td><td>override</td><td>fallback camera ทั้ง section</td></tr>
+    <tr><td>16</td><td>Muuns</td><td>override</td><td>fallback camera ทั้ง section</td></tr>
+  </tbody>
+</table>
+
+<!-- ════════════════════════════════════ 6. MODELS ════════════════════════════════════ -->
+<h2 id="sec-models">6. ส่วน models</h2>
+<p>กำหนดค่าตาม BMD model file &mdash; <strong>ข้าม section ได้</strong> (model เดียวกันในหลาย section ใช้ค่าเดียวกัน)</p>
+
+<h3>รูปแบบที่ 1: Array (preset &rarr; list ของ model files)</h3>
+<pre><code><span class="json-key">"models"</span>: {
+  <span class="json-key">"box"</span>: [                                   <span class="code-comment">// key = ชื่อ preset</span>
+    <span class="json-str">"itembox_gold.bmd"</span>, <span class="json-str">"itembox_silver.bmd"</span>,
+    <span class="json-str">"RudeBox_blue.bmd"</span>, <span class="json-str">"RudeBox_red.bmd"</span>,
+    <span class="json-str">"earringbox.bmd"</span>
+  ],
+  <span class="json-key">"oldboot"</span>: [                               <span class="code-comment">// key = ชื่อ preset</span>
+    <span class="json-str">"BootMale01.bmd"</span>, <span class="json-str">"BootMale02.bmd"</span>, <span class="json-str">"..."</span>, <span class="json-str">"BootMale09.bmd"</span>
+  ]
+}</code></pre>
+<p>&rarr; key <code>"box"</code> = ชื่อ preset &rarr; ทุก model ใน array ใช้ค่าจาก <code>presets.box</code></p>
+
+<h3>รูปแบบที่ 2: Single (model file &rarr; preset หรือ inline config)</h3>
+<pre><code><span class="json-key">"models"</span>: {
+  <span class="json-key">"coin7.bmd"</span>: { <span class="json-key">"rotX"</span>: <span class="json-num">-45</span>, <span class="json-key">"rotY"</span>: <span class="json-num">10</span>, <span class="json-key">"camera"</span>: <span class="json-str">"noflip"</span>, <span class="json-key">"standardize"</span>: <span class="json-bool">false</span> }
+}</code></pre>
+<p>&rarr; item ทุกตัวที่ใช้ <code>coin7.bmd</code> จะได้ค่านี้ (ไม่ว่าอยู่ section ไหน)</p>
+
+<div class="callout callout-tip">
+  <strong>ประโยชน์:</strong> กล่อง <code>RudeBox_red.bmd</code> อยู่ทั้ง section 14 (22 items) และ section 20 (15 items) &mdash; กำหนดใน models ครั้งเดียวได้ค่าเหมือนกันทั้งคู่
+</div>
+
+<!-- ════════════════════════════════════ 7. ITEMS ════════════════════════════════════ -->
+<h2 id="sec-items">7. ส่วน items</h2>
+<p>กำหนดค่าเฉพาะ item &mdash; <strong>ชนะทุกอย่าง</strong> (สูงสุด)</p>
+
+<h3>รูปแบบ key</h3>
+<table>
+  <thead><tr><th>รูปแบบ</th><th>ตัวอย่าง</th><th>ขยายเป็น</th></tr></thead>
+  <tbody>
+    <tr><td>เดี่ยว</td><td><code>"14_0"</code></td><td>item section 14, index 0</td></tr>
+    <tr><td>ช่วง</td><td><code>"14_72-77"</code></td><td>item 14_72, 14_73, 14_74, 14_75, 14_76, 14_77</td></tr>
+  </tbody>
+</table>
+
+<h3>รูปแบบ value</h3>
+<table>
+  <thead><tr><th>รูปแบบ</th><th>ตัวอย่าง</th><th>ความหมาย</th></tr></thead>
+  <tbody>
+    <tr><td>string</td><td><code>"potion"</code></td><td>อ้างอิง preset ชื่อ potion</td></tr>
+    <tr><td>object</td><td><code>{ "rotX": -45, ... }</code></td><td>กำหนดค่าโดยตรง</td></tr>
+  </tbody>
+</table>
+
+<h4>ตัวอย่าง: ใช้ preset</h4>
+<pre><code><span class="json-key">"items"</span>: {
+  <span class="json-key">"14_1-9"</span>:   <span class="json-str">"potion"</span>,
+  <span class="json-key">"14_13-14"</span>: <span class="json-str">"jewel"</span>,
+  <span class="json-key">"15_19-27"</span>: <span class="json-str">"parchment"</span>
+}</code></pre>
+
+<h4>ตัวอย่าง: กำหนดค่าโดยตรง</h4>
+<pre><code><span class="json-key">"items"</span>: {
+  <span class="json-key">"0_1"</span>: {
+    <span class="json-key">"rotX"</span>: <span class="json-num">-45</span>, <span class="json-key">"rotY"</span>: <span class="json-num">30</span>, <span class="json-key">"rotZ"</span>: <span class="json-num">30</span>,
+    <span class="json-key">"fill_ratio"</span>: <span class="json-num">0.80</span>, <span class="json-key">"display_angle"</span>: <span class="json-num">-60</span>,
+    <span class="json-key">"bones"</span>: <span class="json-bool">false</span>, <span class="json-key">"flip"</span>: <span class="json-bool">false</span>
+  },
+  <span class="json-key">"1_4"</span>: {
+    <span class="json-key">"rotX"</span>: <span class="json-num">-5</span>, <span class="json-key">"rotY"</span>: <span class="json-num">40</span>, <span class="json-key">"rotZ"</span>: <span class="json-num">40</span>,
+    <span class="json-key">"scale"</span>: <span class="json-num">0.0025</span>, <span class="json-key">"camera"</span>: <span class="json-str">"noflip"</span>,
+    <span class="json-key">"perspective"</span>: <span class="json-bool">true</span>, <span class="json-key">"fov"</span>: <span class="json-num">45</span>
+  }
+}</code></pre>
+
+<!-- ════════════════════════════════════ 8. SCENARIOS ════════════════════════════════════ -->
+<h2 id="scenarios">8. ตัวอย่างสถานการณ์จริง</h2>
+
+<!-- Scenario 1 -->
+<div class="scenario">
+  <h4>สถานการณ์ 1: render กล่องให้เห็นฝา + ด้านหน้า</h4>
+  <p class="problem">ปัญหา: กล่อง itembox ใช้ fallback camera เห็นก้นกล่อง</p>
+  <p class="solution">แก้ไข: สร้าง preset "box" + ใช้ noflip camera ควบคุมมุมเอง</p>
+<pre><code><span class="json-key">"presets"</span>: {
+  <span class="json-key">"box"</span>: { <span class="json-key">"rotX"</span>: <span class="json-num">-75</span>, <span class="json-key">"rotY"</span>: <span class="json-num">15</span>, <span class="json-key">"rotZ"</span>: <span class="json-num">3.5</span>, <span class="json-key">"camera"</span>: <span class="json-str">"noflip"</span>, <span class="json-key">"standardize"</span>: <span class="json-bool">false</span> }
+},
+<span class="json-key">"models"</span>: {
+  <span class="json-key">"box"</span>: [<span class="json-str">"itembox_gold.bmd"</span>, <span class="json-str">"itembox_silver.bmd"</span>, <span class="json-str">"earringbox.bmd"</span>]
+}</code></pre>
+  <ul>
+    <li><code>rotX: -75</code> = เอียงเห็นฝาด้านบน (-90=ตรงๆ, -75=เอียงหน้า 15&deg;)</li>
+    <li><code>rotY: 15</code> = หมุนเห็นด้านข้างเล็กน้อย</li>
+    <li><code>rotZ: 3.5</code> = ชดเชย noflip camera ให้ฐานราบ</li>
+    <li><code>standardize: false</code> = ไม่ PCA rotate &mdash; กล่องต้องอยู่มุมที่ตั้งไว้</li>
+  </ul>
+</div>
+
+<!-- Scenario 2 -->
+<div class="scenario">
+  <h4>สถานการณ์ 2: ทำให้รองเท้าทั้ง section ตั้งตรง</h4>
+  <p class="problem">ปัญหา: รองเท้าไม่มี bones &rarr; mesh ไม่ประกอบ + display_angle -45 ทำให้นอน</p>
+  <p class="solution">แก้ไข: section override + bones + display_angle -90</p>
+<pre><code><span class="json-key">"sections"</span>: {
+  <span class="json-key">"11"</span>: { <span class="json-key">"camera"</span>: <span class="json-str">"fallback"</span>, <span class="json-key">"display_angle"</span>: <span class="json-num">-90</span>, <span class="json-key">"bones"</span>: <span class="json-bool">true</span>, <span class="json-key">"override"</span>: <span class="json-bool">true</span> }
+},
+<span class="json-key">"models"</span>: {
+  <span class="json-key">"oldboot"</span>: [<span class="json-str">"BootMale01.bmd"</span>, <span class="json-str">"..."</span>, <span class="json-str">"BootMale09.bmd"</span>]
+},
+<span class="json-key">"presets"</span>: {
+  <span class="json-key">"oldboot"</span>: { <span class="json-key">"camera"</span>: <span class="json-str">"fallback"</span>, <span class="json-key">"display_angle"</span>: <span class="json-num">-90</span>, <span class="json-key">"bones"</span>: <span class="json-bool">false</span> }
+}</code></pre>
+  <ul>
+    <li>section 11: <code>override=true</code> &rarr; ทุก item ใช้ bones=true + ตั้งตรง</li>
+    <li><code>oldboot</code> models: override section ด้วย bones=false (mesh เก่า BMD v10 ไม่ต้อง bones)</li>
+  </ul>
+</div>
+
+<!-- Scenario 3 -->
+<div class="scenario">
+  <h4>สถานการณ์ 3: ดาบที่ PCA จัดมุมผิด</h4>
+  <p class="problem">ปัญหา: ดาบบางเล่ม PCA จับแกนผิด ปลายดาบชี้ผิดทาง</p>
+  <p class="solution">แก้ไข: per-item override ด้วย flip: true หรือ flip_canvas: true</p>
+<pre><code><span class="json-key">"items"</span>: {
+  <span class="json-key">"0_5"</span>: {
+    <span class="json-key">"rotX"</span>: <span class="json-num">-45</span>, <span class="json-key">"rotY"</span>: <span class="json-num">40</span>,
+    <span class="json-key">"fill_ratio"</span>: <span class="json-num">0.90</span>, <span class="json-key">"bones"</span>: <span class="json-bool">false</span>,
+    <span class="json-key">"flip"</span>: <span class="json-bool">true</span>, <span class="json-key">"flip_canvas"</span>: <span class="json-bool">true</span>
+  }
+}</code></pre>
+  <ul>
+    <li><code>flip: true</code> = สลับทิศ PCA (ปลาย &harr; ด้าม)</li>
+    <li><code>flip_canvas: true</code> = พลิกภาพซ้าย-ขวาอีกชั้น</li>
+    <li>ใส่ <code>bones: false</code> เสมอ! (per-item ไม่ inherit จาก section)</li>
+  </ul>
+</div>
+
+<!-- Scenario 4 -->
+<div class="scenario">
+  <h4>สถานการณ์ 4: ปีกที่ต้อง merge ค่าเข้า binary TRS</h4>
+  <p class="problem">ปัญหา: ปีก section 12 มี binary TRS (rotX=270, rotY=-10) ที่ดีอยู่แล้ว แต่ต้องเพิ่ม bones + display_angle</p>
+  <p class="solution">แก้ไข: ใช้ merge แทน override เพื่อเก็บ rotation เดิม</p>
+<pre><code><span class="json-key">"sections"</span>: {
+  <span class="json-key">"12"</span>: { <span class="json-key">"display_angle"</span>: <span class="json-num">-90</span>, <span class="json-key">"bones"</span>: <span class="json-bool">true</span>, <span class="json-key">"merge"</span>: <span class="json-bool">true</span> }
+}</code></pre>
+  <ul>
+    <li><code>merge: true</code> &rarr; เก็บ rotX=270, rotY=-10 จาก binary TRS + เพิ่ม display_angle=-90, bones=true</li>
+    <li>ถ้าใช้ <code>override</code> &rarr; ทับ rotation ด้วย 0,0,0 (ค่า default) &rarr; ภาพผิด!</li>
+  </ul>
+</div>
+
+<!-- Scenario 5 -->
+<div class="scenario">
+  <h4>สถานการณ์ 5: item เฉพาะตัวที่ต้องการ perspective</h4>
+  <p class="problem">ปัญหา: Crescent Axe (1_4) เป็น low-poly flat geometry &rarr; orthographic ทำให้เป็นเส้นตรง</p>
+  <p class="solution">แก้ไข: เปิด perspective + fov แคบ</p>
+<pre><code><span class="json-key">"items"</span>: {
+  <span class="json-key">"1_4"</span>: {
+    <span class="json-key">"rotX"</span>: <span class="json-num">-5</span>, <span class="json-key">"rotY"</span>: <span class="json-num">40</span>, <span class="json-key">"rotZ"</span>: <span class="json-num">40</span>,
+    <span class="json-key">"scale"</span>: <span class="json-num">0.0025</span>, <span class="json-key">"camera"</span>: <span class="json-str">"noflip"</span>,
+    <span class="json-key">"perspective"</span>: <span class="json-bool">true</span>, <span class="json-key">"fov"</span>: <span class="json-num">45</span>
+  }
+}</code></pre>
+  <ul>
+    <li><code>perspective: true</code> = ฉาย 3D จริง (ใกล้ใหญ่ ไกลเล็ก)</li>
+    <li><code>fov: 45</code> = ซูมเข้าให้เห็น item ชัด</li>
+  </ul>
+</div>
+
+<!-- Scenario 6 -->
+<div class="scenario">
+  <h4>สถานการณ์ 6: item ที่ render กลับด้านกับ reference</h4>
+  <p class="problem">ปัญหา: เครื่องราง section 20 render ออกมาซ้าย-ขวากลับกับ BMD-viewer</p>
+  <p class="solution">แก้ไข: flip_canvas: true</p>
+<pre><code><span class="json-key">"presets"</span>: {
+  <span class="json-key">"charm"</span>: { <span class="json-key">"camera"</span>: <span class="json-str">"fallback"</span>, <span class="json-key">"standardize"</span>: <span class="json-bool">false</span>, <span class="json-key">"flip_canvas"</span>: <span class="json-bool">true</span> }
+},
+<span class="json-key">"items"</span>: {
+  <span class="json-key">"20_43-50"</span>: <span class="json-str">"charm"</span>,
+  <span class="json-key">"20_162"</span>:   <span class="json-str">"charm"</span>
+}</code></pre>
+  <ul>
+    <li><code>flip_canvas: true</code> = mirror horizontal หลัง render เสร็จ</li>
+    <li>ต่างจาก <code>flip</code> ที่สลับทิศ PCA &mdash; <code>flip_canvas</code> พลิกภาพจริงๆ</li>
+  </ul>
+</div>
+
+<!-- ════════════════════════════════════ QUICK REF ════════════════════════════════════ -->
+<h2 id="quickref">สรุปตัวแปร (Quick Reference)</h2>
+
+<table>
+  <thead><tr><th>ตัวแปร</th><th>ชนิด</th><th>ค่าเริ่มต้น</th><th>ใช้ใน</th><th>คำอธิบายสั้น</th></tr></thead>
+  <tbody>
+    <tr><td><code>rotX</code></td><td><span class="tag tag-float">float</span></td><td>0</td><td>ทุกที่</td><td>หมุนรอบแกน X (องศา)</td></tr>
+    <tr><td><code>rotY</code></td><td><span class="tag tag-float">float</span></td><td>0</td><td>ทุกที่</td><td>หมุนรอบแกน Y (องศา)</td></tr>
+    <tr><td><code>rotZ</code></td><td><span class="tag tag-float">float</span></td><td>0</td><td>ทุกที่</td><td>หมุนรอบแกน Z (องศา)</td></tr>
+    <tr><td><code>scale</code></td><td><span class="tag tag-float">float</span></td><td>0.0025</td><td>ทุกที่</td><td>ตัวคูณขนาด</td></tr>
+    <tr><td><code>camera</code></td><td><span class="tag tag-str">string</span></td><td>auto</td><td>ทุกที่</td><td>กล้อง: noflip / correction / fallback</td></tr>
+    <tr><td><code>bones</code></td><td><span class="tag tag-bool">bool</span></td><td>auto</td><td>ทุกที่</td><td>เปิด/ปิด bone transforms</td></tr>
+    <tr><td><code>standardize</code></td><td><span class="tag tag-bool">bool</span></td><td>true</td><td>ทุกที่</td><td>เปิด/ปิด PCA จัดภาพ</td></tr>
+    <tr><td><code>display_angle</code></td><td><span class="tag tag-float">float</span></td><td>-45</td><td>ทุกที่</td><td>มุม PCA (องศา)</td></tr>
+    <tr><td><code>fill_ratio</code></td><td><span class="tag tag-float">float</span></td><td>0.70</td><td>ทุกที่</td><td>สัดส่วนเติมผ้าใบ</td></tr>
+    <tr><td><code>flip</code></td><td><span class="tag tag-bool">bool</span></td><td>false</td><td>ทุกที่</td><td>สลับทิศ PCA</td></tr>
+    <tr><td><code>flip_canvas</code></td><td><span class="tag tag-bool">bool</span></td><td>false</td><td>ทุกที่</td><td>พลิกภาพซ้าย-ขวา</td></tr>
+    <tr><td><code>perspective</code></td><td><span class="tag tag-bool">bool</span></td><td>false</td><td>ทุกที่</td><td>เปิด perspective projection</td></tr>
+    <tr><td><code>fov</code></td><td><span class="tag tag-float">float</span></td><td>75</td><td>ทุกที่</td><td>มุมมอง (ใช้กับ perspective)</td></tr>
+    <tr><td><code>keep_all_meshes</code></td><td><span class="tag tag-bool">bool</span></td><td>false</td><td>ทุกที่</td><td>ข้าม effect mesh filter</td></tr>
+    <tr><td><code>override</code></td><td><span class="tag tag-sec">sections</span></td><td>false</td><td>sections</td><td>แทนที่ binary TRS ทั้ง section</td></tr>
+    <tr><td><code>merge</code></td><td><span class="tag tag-sec">sections</span></td><td>false</td><td>sections</td><td>merge ค่าเข้า binary TRS</td></tr>
+  </tbody>
+</table>
+
+</main>
+</div>
+
+<!-- Scroll to top -->
+<button class="scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Scroll to top">&uarr;</button>
+
+<script>
+// Sidebar active highlight
+const sections = document.querySelectorAll('h2[id], h3[id]');
+const links = document.querySelectorAll('.sidebar a');
+const scrollBtn = document.querySelector('.scroll-top');
+
+function onScroll() {
+  let current = '';
+  sections.forEach(s => {
+    if (window.scrollY >= s.offsetTop - 100) current = s.id;
+  });
+  links.forEach(a => {
+    a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+  });
+  scrollBtn.classList.toggle('show', window.scrollY > 400);
+}
+window.addEventListener('scroll', onScroll, { passive: true });
+onScroll();
+</script>
+</body>
+</html>
