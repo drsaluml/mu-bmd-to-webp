@@ -29,7 +29,7 @@
     "swordx":         { "rotX": -14, "rotY": 14, "rotZ": 43, "camera": "noflip", "bones": false }
   },
   "sections": {
-    "0":  { "rotX": -45, "rotY": 40, "rotZ": 0, "scale": 0.0055, "bones": false, "override": true, "fill_ratio": 0.90, "display_angle": -30, "flip": true },
+    "0":  { "rotX": -45, "rotY": 40, "rotZ": 0, "scale": 0.0055, "bones": false, "override": true, "fill_ratio": 0.90, "display_angle": -90, "flip": true },
     "1":  { "rotX": 0, "rotY": 18, "rotZ": 0, "scale": 0.0025, "bones": false, "override": true },
     "13": { "camera": "fallback", "standardize": false, "override": true },
     "14": { "camera": "fallback", "display_angle": -90, "override": true },
@@ -62,14 +62,11 @@
     "coin7.bmd": { "rotX": -45, "rotY": 10, "rotZ": 0, "camera": "noflip", "standardize": false }
   },
   "items": {
-    "0_0":          { "rotX": -45, "rotY": 40, "rotZ": 0, "display_angle": -30, "fill_ratio": 0.80, "flip": true },
-    "0_1":          { "rotX": -45, "rotY": 40, "rotZ": 0, "display_angle": -30,  "override": false, "fill_ratio": 0.80,  "flip": true },
-    "0_2":          { "rotX": -45, "rotY": 40, "rotZ": 0,"display_angle": -30, "override": false, "fill_ratio": 0.80, "flip": true },
-    "0_3":          { "rotX": -45, "rotY": 40, "rotZ": -10,"display_angle": -30,  "override": false, "fill_ratio": 0.80, "flip": true },
-    "0_4":          { "rotX": -45, "rotY": 40, "rotZ": -10,"display_angle": -30,  "override": false, "fill_ratio": 0.80, "flip": false },
-    "0_5":          { "rotX": -45, "rotY": 40, "rotZ": 0,"display_angle": -30,  "fill_ratio": 0.80, "bones": false, "flip": true, "flip_canvas": true },
-    "0_81":         { "rotX": -45, "rotY": 40, "rotZ": 0,"display_angle": -30,  "fill_ratio": 0.90, "bones": true, "flip": true },
-    "0_82":         { "rotX": -45, "rotY": 40, "rotZ": 0,"display_angle": -30,  "fill_ratio": 0.90, "bones": true, "flip": true },
+    "0_0":          { "rotX": -45, "rotY": 40, "rotZ": 0, "fill_ratio": 0.50, "display_angle": -60, "bones": false, "override": true, "flip": true },
+    "0_1":          { "rotX": -45, "rotY": 30, "rotZ": 30, "fill_ratio": 0.80, "display_angle": -60, "bones": false, "override": true, "flip": false },
+    "0_5":          { "rotX": -45, "rotY": 40, "rotZ": 0, "fill_ratio": 0.90, "bones": false, "flip": true, "flip_canvas": true },
+    "0_81":         { "rotX": -45, "rotY": 40, "rotZ": 0, "fill_ratio": 0.90, "bones": true, "flip": true },
+    "0_82":         { "rotX": -45, "rotY": 40, "rotZ": 0, "fill_ratio": 0.90, "bones": true, "flip": true },
 
     "1_0-2":          { "rotX": 0, "rotY": 18, "rotZ": 140, "scale": 0.0025, "bones": false },
     "1_3":          { "rotX": 180, "rotY": 18, "rotZ": 0, "scale": 0.0025, "bones": false },
