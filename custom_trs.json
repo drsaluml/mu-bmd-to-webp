@@ -147,6 +147,9 @@
     
     "3_0-1":  { "rotX": -45, "rotY": 40, "rotZ": 90, "scale": 0.0025, "bones": true, "override": true, "fill_ratio": 0.80, "display_angle": -60, "flip": false },
     "3_3-12":  { "rotX": -45, "rotY": 40, "rotZ": 90, "scale": 0.0025, "bones": true, "override": true, "fill_ratio": 0.80, "display_angle": -60, "flip": false },
+    "3_14":  { "rotX": -45, "rotY": 40, "rotZ": 90, "scale": 0.0025, "bones": true, "override": true, "fill_ratio": 0.80, "display_angle": -60, "flip": false },
+    "3_17-18":  { "rotX": -45, "rotY": 40, "rotZ": 90, "scale": 0.0025, "bones": true, "override": true, "fill_ratio": 0.80, "display_angle": -60, "flip": false },
+    "3_29":  { "rotX": -45, "rotY": 40, "rotZ": 90, "scale": 0.0025, "bones": true, "override": true, "fill_ratio": 0.80, "display_angle": -60, "flip": false },
 
     "1_0-2":          { "rotX": 0, "rotY": 18, "rotZ": 140, "scale": 0.0025, "bones": false },
     "1_3":          { "rotX": 180, "rotY": 18, "rotZ": 0, "scale": 0.0025, "bones": false },
