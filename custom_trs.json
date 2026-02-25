@@ -197,6 +197,7 @@
 
     "5_19" : { "rotX": -45, "rotY": 40, "rotZ": 90, "scale": 0.0025, "bones": false, "override": true, "fill_ratio": 0.80, "display_angle": -60, "flip": false },
 
+    "6_4": { "camera": "noflip", "bones": false, "override": true, "standardize": false },
     "6_115-119": { "camera": "noflip", "bones": false, "display_angle": -90, "override": true },
 
     "14_0":         { "camera": "fallback", "standardize": false, "keep_all_meshes": true },

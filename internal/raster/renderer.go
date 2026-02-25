@@ -103,7 +103,10 @@ func RenderBMD(
 	// Split meshes into opaque, alpha-blend, and additive
 	var opaqueMeshes, alphaBlendMeshes, additiveMeshes []bmd.Mesh
 	for i, mesh := range bodyMeshes {
-		if isAdditiveTexture(mesh.TexPath) || isBillboardJPEG(&mesh) || isDuplicateGeometryOverlay(bodyMeshes, i) {
+		// Only classify as billboard when there are other body meshes —
+		// a single-mesh model can't be an "overlay" on nothing.
+		billboard := len(bodyMeshes) > 1 && isBillboardJPEG(&mesh)
+		if isAdditiveTexture(mesh.TexPath) || billboard || isDuplicateGeometryOverlay(bodyMeshes, i) {
 			additiveMeshes = append(additiveMeshes, mesh)
 		} else if isTGAPairedGlowJPEG(bodyMeshes, i, texResolver) {
 			additiveMeshes = append(additiveMeshes, mesh)
@@ -111,6 +114,18 @@ func RenderBMD(
 			alphaBlendMeshes = append(alphaBlendMeshes, mesh)
 		} else {
 			opaqueMeshes = append(opaqueMeshes, mesh)
+		}
+	}
+
+	// Safety: if no opaque mesh exists, promote from additive/alpha to avoid
+	// rendering everything with luminance-based alpha onto an empty canvas.
+	if len(opaqueMeshes) == 0 && (len(additiveMeshes) > 0 || len(alphaBlendMeshes) > 0) {
+		if len(additiveMeshes) > 0 {
+			opaqueMeshes = append(opaqueMeshes, additiveMeshes[0])
+			additiveMeshes = additiveMeshes[1:]
+		} else {
+			opaqueMeshes = append(opaqueMeshes, alphaBlendMeshes[0])
+			alphaBlendMeshes = alphaBlendMeshes[1:]
 		}
 	}
 
@@ -144,13 +159,13 @@ func isAdditiveTexture(texPath string) bool {
 	return strings.HasSuffix(strings.ToLower(stem), "_r")
 }
 
-// isBillboardJPEG returns true if this mesh is a small JPEG-textured overlay (≤36 verts, ≤36 tris)
+// isBillboardJPEG returns true if this mesh is a small JPEG-textured overlay (≤16 verts, ≤12 tris)
 // that the game renders with additive blending — black pixels add nothing, bright pixels glow.
 // Covers single quads (4v/2t), double quads (8v/4t), cross-shaped billboards (12v/6t),
-// small diamond/octahedron shapes (16v/12t), multi-plane crosses (24v/12t),
-// and flat decorative plates like lance cross-blades (22v/36t, 35v/24t).
+// and small diamond/octahedron shapes (16v/12t).
+// Threshold kept conservative to avoid misclassifying real small mesh parts (e.g. shield bosses).
 func isBillboardJPEG(m *bmd.Mesh) bool {
-	if len(m.Verts) > 36 || len(m.Tris) > 36 || len(m.Verts) == 0 {
+	if len(m.Verts) > 16 || len(m.Tris) > 12 || len(m.Verts) == 0 {
 		return false
 	}
 	ext := strings.ToLower(filepath.Ext(strings.ReplaceAll(m.TexPath, "\\", "/")))
