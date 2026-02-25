@@ -191,6 +191,8 @@
     "4_72" : { "rotX": -45, "rotY": 40, "rotZ": 90, "scale": 0.0025, "bones": true, "override": true, "fill_ratio": 0.80, "display_angle": -60, "flip": true },
     "4_74" : { "rotX": -45, "rotY": 40, "rotZ": 90, "scale": 0.0025, "bones": true, "override": true, "fill_ratio": 0.80, "display_angle": -90, "flip": false },
 
+    "5_19" : { "rotX": -45, "rotY": 40, "rotZ": 90, "scale": 0.0025, "bones": false, "override": true, "fill_ratio": 0.80, "display_angle": -60, "flip": false },
+
     "14_0":         { "camera": "fallback", "standardize": false, "keep_all_meshes": true },
     "14_1-9":       "potion",
     "14_11":        "parchment",

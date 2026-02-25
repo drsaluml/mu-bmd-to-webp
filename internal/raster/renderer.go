@@ -105,7 +105,9 @@ func RenderBMD(
 	for i, mesh := range bodyMeshes {
 		if isAdditiveTexture(mesh.TexPath) || isBillboardJPEG(&mesh) || isDuplicateGeometryOverlay(bodyMeshes, i) {
 			additiveMeshes = append(additiveMeshes, mesh)
-		} else if isAlphaOverlay(bodyMeshes, i) {
+		} else if isTGAPairedGlowJPEG(bodyMeshes, i, texResolver) {
+			additiveMeshes = append(additiveMeshes, mesh)
+		} else if isAlphaOverlay(bodyMeshes, i, texResolver) {
 			alphaBlendMeshes = append(alphaBlendMeshes, mesh)
 		} else {
 			opaqueMeshes = append(opaqueMeshes, mesh)
@@ -168,7 +170,8 @@ const (
 // Only triggers when a JPEG mesh has similar complexity (both verts and tris within 2×),
 // which distinguishes overlay pairs from models where TGA is the main body
 // (e.g. CW_Bow.bmd: TGA 182v/310t vs JPEG 103v/150t — tri ratio 2.07× exceeds 2×).
-func isAlphaOverlay(meshes []bmd.Mesh, idx int) bool {
+// Skips JPEG meshes with tiny textures (≤32×32) as those are glow fills, not bodies.
+func isAlphaOverlay(meshes []bmd.Mesh, idx int, texResolver texture.Resolver) bool {
 	ext := strings.ToLower(filepath.Ext(strings.ReplaceAll(meshes[idx].TexPath, "\\", "/")))
 	if ext != ".tga" {
 		return false
@@ -187,6 +190,16 @@ func isAlphaOverlay(meshes []bmd.Mesh, idx int) bool {
 		jpgT := len(meshes[i].Tris)
 		if jpgV == 0 || jpgT == 0 {
 			continue
+		}
+		// Skip JPEG meshes with tiny textures — those are glow fills, not body meshes
+		if texResolver != nil {
+			tex := texResolver.Resolve(meshes[i].TexPath)
+			if tex != nil {
+				b := tex.Bounds()
+				if b.Dx() <= 32 && b.Dy() <= 32 {
+					continue
+				}
+			}
 		}
 		// Similar geometry: both vert and tri counts within 2× of each other
 		if tgaV <= jpgV*2 && tgaT <= jpgT*2 {
@@ -375,6 +388,43 @@ func isBrightGlowJPEG(m *bmd.Mesh, texResolver texture.Resolver) bool {
 		saturation = (maxC - minC) / maxC
 	}
 	return brightness > 180 && saturation < 0.25
+}
+
+// isTGAPairedGlowJPEG returns true if a JPEG mesh in a model with TGA meshes
+// has a tiny texture (≤32px in both dimensions) — indicating it's a glow/gradient
+// fill overlay, not a real body texture (e.g. staff20.bmd: 16×16 cyan "a_2.jpg").
+// The game renders these with additive blending where black = transparent.
+func isTGAPairedGlowJPEG(meshes []bmd.Mesh, idx int, texResolver texture.Resolver) bool {
+	if texResolver == nil {
+		return false
+	}
+	ext := strings.ToLower(filepath.Ext(strings.ReplaceAll(meshes[idx].TexPath, "\\", "/")))
+	if ext != ".jpg" && ext != ".jpeg" {
+		return false
+	}
+	// Only applies when model also has a TGA mesh
+	hasTGA := false
+	for i := range meshes {
+		if i == idx {
+			continue
+		}
+		e := strings.ToLower(filepath.Ext(strings.ReplaceAll(meshes[i].TexPath, "\\", "/")))
+		if e == ".tga" {
+			hasTGA = true
+			break
+		}
+	}
+	if !hasTGA {
+		return false
+	}
+	tex := texResolver.Resolve(meshes[idx].TexPath)
+	if tex == nil {
+		return false
+	}
+	b := tex.Bounds()
+	w, h := b.Dx(), b.Dy()
+	// Tiny textures (≤32×32) are gradient/glow fills, not body textures
+	return w <= 32 && h <= 32
 }
 
 func averageColor(tex *image.NRGBA) (uint8, uint8, uint8, uint8) {
