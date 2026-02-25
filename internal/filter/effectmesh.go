@@ -20,7 +20,8 @@ var effectPatterns = []string{
 	"ground_wind", "ground_star", "line_of_big",
 	"force", "runeset",
 	"shockwave", "swordeff",
-	"cursorpin", "empact",
+	"cursorpin", "empact", "circle_shield",
+	"arrowbom",
 }
 
 // IsEffectMesh returns true if this mesh is an aura/glow/effect overlay.

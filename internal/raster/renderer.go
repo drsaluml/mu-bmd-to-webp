@@ -163,31 +163,33 @@ const (
 )
 
 // isAlphaOverlay returns true if this TGA-textured mesh should use alpha blending
-// because the model also has JPEG-textured meshes on different geometry, indicating
-// this TGA mesh is a decorative overlay (e.g. Crossbow17.bmd: TGA detail + JPEG body).
-// Exception: if the TGA mesh is the largest mesh (by vertex count), it's the main
-// body and should render opaque (e.g. Bow_24.bmd: small JPEG string + large TGA body).
+// because the model also has a JPEG mesh with similar geometry, indicating this TGA
+// is a decorative overlay layer (e.g. Crossbow17.bmd: TGA 154v/166t + JPEG 134v/146t).
+// Only triggers when a JPEG mesh has similar complexity (both verts and tris within 2×),
+// which distinguishes overlay pairs from models where TGA is the main body
+// (e.g. CW_Bow.bmd: TGA 182v/310t vs JPEG 103v/150t — tri ratio 2.07× exceeds 2×).
 func isAlphaOverlay(meshes []bmd.Mesh, idx int) bool {
 	ext := strings.ToLower(filepath.Ext(strings.ReplaceAll(meshes[idx].TexPath, "\\", "/")))
 	if ext != ".tga" {
 		return false
 	}
-	// Don't classify the largest mesh as an overlay
-	maxVerts := 0
-	for i := range meshes {
-		if len(meshes[i].Verts) > maxVerts {
-			maxVerts = len(meshes[i].Verts)
-		}
-	}
-	if len(meshes[idx].Verts) == maxVerts {
-		return false
-	}
+	tgaV := len(meshes[idx].Verts)
+	tgaT := len(meshes[idx].Tris)
 	for i := range meshes {
 		if i == idx {
 			continue
 		}
 		e := strings.ToLower(filepath.Ext(strings.ReplaceAll(meshes[i].TexPath, "\\", "/")))
-		if e == ".jpg" || e == ".jpeg" {
+		if e != ".jpg" && e != ".jpeg" {
+			continue
+		}
+		jpgV := len(meshes[i].Verts)
+		jpgT := len(meshes[i].Tris)
+		if jpgV == 0 || jpgT == 0 {
+			continue
+		}
+		// Similar geometry: both vert and tri counts within 2× of each other
+		if tgaV <= jpgV*2 && tgaT <= jpgT*2 {
 			return true
 		}
 	}
