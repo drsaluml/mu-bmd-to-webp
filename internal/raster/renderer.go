@@ -105,7 +105,9 @@ func RenderBMD(
 	for i, mesh := range bodyMeshes {
 		// Only classify as billboard when there are other body meshes —
 		// a single-mesh model can't be an "overlay" on nothing.
-		billboard := len(bodyMeshes) > 1 && isBillboardJPEG(&mesh)
+		// Also skip billboard classification if this mesh has a _R additive
+		// counterpart with the same geometry — it's the base layer, not glow.
+		billboard := len(bodyMeshes) > 1 && isBillboardJPEG(&mesh) && !hasAdditiveCounterpart(bodyMeshes, i)
 		if isAdditiveTexture(mesh.TexPath) || billboard || isDuplicateGeometryOverlay(bodyMeshes, i) {
 			additiveMeshes = append(additiveMeshes, mesh)
 		} else if isTGAPairedGlowJPEG(bodyMeshes, i, texResolver) {
@@ -216,8 +218,8 @@ func isAlphaOverlay(meshes []bmd.Mesh, idx int, texResolver texture.Resolver) bo
 				}
 			}
 		}
-		// Similar geometry: both vert and tri counts within 2× of each other
-		if tgaV <= jpgV*2 && tgaT <= jpgT*2 {
+		// Similar geometry: both vert and tri counts within 2× of each other (both directions)
+		if tgaV <= jpgV*2 && jpgV <= tgaV*2 && tgaT <= jpgT*2 && jpgT <= tgaT*2 {
 			return true
 		}
 	}
@@ -236,6 +238,23 @@ func isDuplicateGeometryOverlay(meshes []bmd.Mesh, idx int) bool {
 	for j := 0; j < idx; j++ {
 		prev := &meshes[j]
 		if len(prev.Verts) == nv && len(prev.Tris) == nt {
+			return true
+		}
+	}
+	return false
+}
+
+// hasAdditiveCounterpart returns true if another mesh in the model has the _R suffix
+// texture with the same vertex/triangle count — indicating meshes[idx] is the base
+// layer (not a billboard) and the _R mesh is its additive glow overlay.
+func hasAdditiveCounterpart(meshes []bmd.Mesh, idx int) bool {
+	nv, nt := len(meshes[idx].Verts), len(meshes[idx].Tris)
+	for j := range meshes {
+		if j == idx {
+			continue
+		}
+		if isAdditiveTexture(meshes[j].TexPath) &&
+			len(meshes[j].Verts) == nv && len(meshes[j].Tris) == nt {
 			return true
 		}
 	}
