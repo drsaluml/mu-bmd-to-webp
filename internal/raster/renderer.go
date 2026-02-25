@@ -100,11 +100,13 @@ func RenderBMD(
 	fb := NewFrameBuffer(renderSize, renderSize)
 	lc := DefaultLightConfig()
 
-	// Split meshes into opaque and additive
-	var opaqueMeshes, additiveMeshes []bmd.Mesh
-	for _, mesh := range bodyMeshes {
-		if isAdditiveTexture(mesh.TexPath) || isBillboardJPEG(&mesh) {
+	// Split meshes into opaque, alpha-blend, and additive
+	var opaqueMeshes, alphaBlendMeshes, additiveMeshes []bmd.Mesh
+	for i, mesh := range bodyMeshes {
+		if isAdditiveTexture(mesh.TexPath) || isBillboardJPEG(&mesh) || isDuplicateGeometryOverlay(bodyMeshes, i) {
 			additiveMeshes = append(additiveMeshes, mesh)
+		} else if isAlphaOverlay(bodyMeshes, i) {
+			alphaBlendMeshes = append(alphaBlendMeshes, mesh)
 		} else {
 			opaqueMeshes = append(opaqueMeshes, mesh)
 		}
@@ -112,12 +114,17 @@ func RenderBMD(
 
 	// Pass 1: Opaque meshes (normal z-buffer rendering)
 	for _, mesh := range opaqueMeshes {
-		rasterizeMesh(fb, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, false)
+		rasterizeMesh(fb, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendOpaque)
 	}
 
-	// Pass 2: Additive meshes (no z-buffer, add colors on top)
+	// Pass 2: Alpha-blend meshes (z-read but no z-write, alpha composite)
+	for _, mesh := range alphaBlendMeshes {
+		rasterizeMesh(fb, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendAlpha)
+	}
+
+	// Pass 3: Additive meshes (no z-buffer, add colors on top)
 	for _, mesh := range additiveMeshes {
-		rasterizeMesh(fb, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, true)
+		rasterizeMesh(fb, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendAdditive)
 	}
 
 	// Convert framebuffer to image
@@ -148,11 +155,68 @@ func isBillboardJPEG(m *bmd.Mesh) bool {
 	return ext == ".jpg" || ext == ".jpeg"
 }
 
+// Blend mode constants for rasterizeMesh.
+const (
+	blendOpaque   = 0
+	blendAlpha    = 1
+	blendAdditive = 2
+)
+
+// isAlphaOverlay returns true if this TGA-textured mesh should use alpha blending
+// because the model also has JPEG-textured meshes on different geometry, indicating
+// this TGA mesh is a decorative overlay (e.g. Crossbow17.bmd: TGA detail + JPEG body).
+// Exception: if the TGA mesh is the largest mesh (by vertex count), it's the main
+// body and should render opaque (e.g. Bow_24.bmd: small JPEG string + large TGA body).
+func isAlphaOverlay(meshes []bmd.Mesh, idx int) bool {
+	ext := strings.ToLower(filepath.Ext(strings.ReplaceAll(meshes[idx].TexPath, "\\", "/")))
+	if ext != ".tga" {
+		return false
+	}
+	// Don't classify the largest mesh as an overlay
+	maxVerts := 0
+	for i := range meshes {
+		if len(meshes[i].Verts) > maxVerts {
+			maxVerts = len(meshes[i].Verts)
+		}
+	}
+	if len(meshes[idx].Verts) == maxVerts {
+		return false
+	}
+	for i := range meshes {
+		if i == idx {
+			continue
+		}
+		e := strings.ToLower(filepath.Ext(strings.ReplaceAll(meshes[i].TexPath, "\\", "/")))
+		if e == ".jpg" || e == ".jpeg" {
+			return true
+		}
+	}
+	return false
+}
+
+// isDuplicateGeometryOverlay returns true if meshes[idx] has the same vertex count,
+// triangle count, and bounding box as an earlier mesh — indicating it's a glow/effect
+// overlay layer (MU Online pattern: same geometry + sequential textures like xx00/xx01).
+func isDuplicateGeometryOverlay(meshes []bmd.Mesh, idx int) bool {
+	if idx == 0 {
+		return false
+	}
+	m := &meshes[idx]
+	nv, nt := len(m.Verts), len(m.Tris)
+	for j := 0; j < idx; j++ {
+		prev := &meshes[j]
+		if len(prev.Verts) == nv && len(prev.Tris) == nt {
+			return true
+		}
+	}
+	return false
+}
+
 func rasterizeMesh(
 	fb *FrameBuffer, mesh *bmd.Mesh,
 	R mathutil.Mat3, center [3]float64, scale float64, renderSize int,
 	entry *trs.Entry, texResolver texture.Resolver, lc *LightConfig,
-	additive bool,
+	blendMode int,
 ) {
 	if len(mesh.Verts) == 0 {
 		return
@@ -170,9 +234,15 @@ func rasterizeMesh(
 		defR, defG, defB, defA = averageColor(tex)
 	}
 
-	rasterFn := RasterizeTriangle
-	if additive {
+	type rasterFunc func(*FrameBuffer, []float64, []float64, []float64, [][2]float32, [3]int, [3]int, *image.NRGBA, uint8, uint8, uint8, uint8, *LightConfig)
+	var rasterFn rasterFunc
+	switch blendMode {
+	case blendAdditive:
 		rasterFn = RasterizeTriangleAdditive
+	case blendAlpha:
+		rasterFn = RasterizeTriangleAlphaBlend
+	default:
+		rasterFn = RasterizeTriangle
 	}
 
 	for _, tri := range mesh.Tris {

@@ -3,6 +3,8 @@ package raster
 import (
 	"image"
 	"math"
+
+	"mu-bmd-renderer/internal/mathutil"
 )
 
 // RasterizeTriangle rasterizes a single triangle with texture mapping, z-buffer,
@@ -340,6 +342,148 @@ func RasterizeTriangleAdditive(
 			if addAlpha > fb.Color[pxIdx+3] {
 				fb.Color[pxIdx+3] = addAlpha
 			}
+		}
+	}
+}
+
+// RasterizeTriangleAlphaBlend renders a triangle with alpha blending.
+// Z-buffer is READ (depth test) but NOT written — allows overlays on top of opaque geometry.
+// Uses standard alpha compositing: dst = src*a + dst*(1-a).
+func RasterizeTriangleAlphaBlend(
+	fb *FrameBuffer,
+	px, py, pz []float64,
+	uvs [][2]float32,
+	vi [3]int, ti [3]int,
+	tex *image.NRGBA,
+	defaultR, defaultG, defaultB, defaultA uint8,
+	lc *LightConfig,
+) {
+	nv := len(px)
+	nuv := len(uvs)
+
+	idx := [3]int{vi[0], vi[1], vi[2]}
+	for _, i := range idx {
+		if i < 0 || i >= nv {
+			return
+		}
+	}
+
+	x0, y0, z0 := px[idx[0]], py[idx[0]], pz[idx[0]]
+	x1, y1, z1 := px[idx[1]], py[idx[1]], pz[idx[1]]
+	x2, y2, z2 := px[idx[2]], py[idx[2]], pz[idx[2]]
+
+	uvIdx := [3]int{ti[0], ti[1], ti[2]}
+	hasUV := tex != nil
+	for _, i := range uvIdx {
+		if i < 0 || i >= nuv {
+			hasUV = false
+			break
+		}
+	}
+
+	var u0, v0uv, u1, v1uv, u2, v2uv float64
+	if hasUV {
+		u0, v0uv = float64(uvs[uvIdx[0]][0]), float64(uvs[uvIdx[0]][1])
+		u1, v1uv = float64(uvs[uvIdx[1]][0]), float64(uvs[uvIdx[1]][1])
+		u2, v2uv = float64(uvs[uvIdx[2]][0]), float64(uvs[uvIdx[2]][1])
+	}
+
+	// Flat shading
+	e1x, e1y, e1z := x1-x0, y1-y0, z1-z0
+	e2x, e2y, e2z := x2-x0, y2-y0, z2-z0
+	nx := e1y*e2z - e1z*e2y
+	ny := e1z*e2x - e1x*e2z
+	nz := e1x*e2y - e1y*e2x
+	nl := math.Sqrt(nx*nx + ny*ny + nz*nz)
+	if nl < 1e-12 {
+		return
+	}
+	inv := 1.0 / nl
+	nx, ny, nz = nx*inv, ny*inv, nz*inv
+	shade := lc.ComputeShade(mathutil.Vec3{nx, ny, nz})
+	exposure := lc.Exposure
+	invGamma := lc.InvGamma
+
+	size := fb.Width
+
+	minX := int(math.Floor(math.Min(x0, math.Min(x1, x2))))
+	maxX := int(math.Ceil(math.Max(x0, math.Max(x1, x2))))
+	minY := int(math.Floor(math.Min(y0, math.Min(y1, y2))))
+	maxY := int(math.Ceil(math.Max(y0, math.Max(y1, y2))))
+
+	if minX < 0 { minX = 0 }
+	if maxX >= size { maxX = size - 1 }
+	if minY < 0 { minY = 0 }
+	if maxY >= size { maxY = size - 1 }
+
+	dx21 := x2 - x1; dy12 := y1 - y2
+	dx02 := x0 - x2; dy20 := y2 - y0
+	det := dy12*dx02 - dx21*dy20
+	if math.Abs(det) < 1e-10 { return }
+	invDet := 1.0 / det
+
+	for sy := minY; sy <= maxY; sy++ {
+		dsy := float64(sy) - y2
+		rowOff := sy * size
+		for sx := minX; sx <= maxX; sx++ {
+			dsx := float64(sx) - x2
+			w0 := (dy12*dsx + dx21*dsy) * invDet
+			w1 := (dy20*dsx + dx02*dsy) * invDet
+			w2 := 1.0 - w0 - w1
+
+			if w0 < -0.001 || w1 < -0.001 || w2 < -0.001 {
+				continue
+			}
+
+			// Z-depth test (read only, no write)
+			z := w0*z0 + w1*z1 + w2*z2
+			zbIdx := rowOff + sx
+			if z > fb.ZBuf[zbIdx] {
+				continue
+			}
+
+			var cr, cg, cb, ca uint8
+			if hasUV {
+				u := w0*u0 + w1*u1 + w2*u2
+				v := w0*v0uv + w1*v1uv + w2*v2uv
+				cr, cg, cb, ca = SampleTexture(tex, u, v)
+			} else {
+				cr, cg, cb, ca = defaultR, defaultG, defaultB, defaultA
+			}
+
+			if ca < 8 {
+				continue
+			}
+
+			lr := srgbToLinear[cr]
+			lg := srgbToLinear[cg]
+			lb := srgbToLinear[cb]
+
+			sr := lr * shade * exposure
+			sg := lg * shade * exposure
+			sb := lb * shade * exposure
+
+			tr := ACESTonemap(sr)
+			tg := ACESTonemap(sg)
+			tb := ACESTonemap(sb)
+
+			srcR := math.Pow(tr, invGamma) * 255
+			srcG := math.Pow(tg, invGamma) * 255
+			srcB := math.Pow(tb, invGamma) * 255
+
+			// Alpha compositing: dst = src*a + dst*(1-a)
+			a := float64(ca) / 255.0
+			oneMinusA := 1.0 - a
+			pxIdx := (rowOff + sx) * 4
+			dstR := float64(fb.Color[pxIdx])
+			dstG := float64(fb.Color[pxIdx+1])
+			dstB := float64(fb.Color[pxIdx+2])
+			dstA := float64(fb.Color[pxIdx+3])
+
+			fb.Color[pxIdx] = clamp255(srcR*a + dstR*oneMinusA)
+			fb.Color[pxIdx+1] = clamp255(srcG*a + dstG*oneMinusA)
+			fb.Color[pxIdx+2] = clamp255(srcB*a + dstB*oneMinusA)
+			fb.Color[pxIdx+3] = clamp255(float64(ca) + dstA*oneMinusA)
 		}
 	}
 }
