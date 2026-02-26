@@ -197,7 +197,21 @@
 
     "5_19" : { "rotX": -45, "rotY": 40, "rotZ": 90, "scale": 0.0025, "bones": false, "override": true, "fill_ratio": 0.80, "display_angle": -60, "flip": false },
 
-    "6_4": { "camera": "noflip", "bones": false, "override": true, "standardize": false },
+    "6_11-12":  { "rotX": -107, "rotY": -59, "rotZ": -64, "scale": 0.0025, "bones": true, "display_angle": -90, "flip": false,"camera": "noflip" },
+    "6_13":  { "rotX": -45, "rotY": -40, "rotZ": -80, "scale": 0.0025, "bones": true, "display_angle": -90, "flip": false,"camera": "noflip"},
+    "6_14":  { "rotX": -107, "rotY": -59, "rotZ": -64, "scale": 0.0025, "bones": true, "display_angle": -90, "flip": true,"camera": "noflip" },
+    "6_15":  { "rotX": -10, "rotY": 90, "rotZ": 0, "camera": "noflip", "bones": false, "display_angle": -90 },
+    "6_16":  { "rotX": -10, "rotY": 90, "rotZ": 0, "camera": "noflip", "bones": false, "display_angle": -90 },
+    "6_17":  { "rotX": 90, "rotY": 10, "rotZ": 0, "camera": "noflip", "bones": false, "display_angle": -90 },
+    "6_18":  { "rotX": -90, "rotY": 10, "rotZ": 0, "camera": "noflip", "bones": false, "display_angle": -90 },
+    "6_19":  { "rotX": 0, "rotY": 0, "rotZ": 90, "camera": "noflip", "bones": false, "display_angle": -90, "additive_textures": ["PBshield_b"] },
+    "6_21":  { "rotX": 90, "rotY": 10, "rotZ": 0, "camera": "noflip", "bones": false, "display_angle": -90 },
+    "6_22":  { "rotX": -10, "rotY": 90, "rotZ": 0, "camera": "noflip", "bones": false, "display_angle": -90 },
+    "6_23":  { "rotX": -10, "rotY": 90, "rotZ": 0, "camera": "noflip", "bones": true, "display_angle": -90 },
+    "6_24":  { "rotX": -90, "rotY": 10, "rotZ": 0, "camera": "noflip", "bones": false, "display_angle": -90 },
+    "6_25":  { "rotX": -90, "rotY": 10, "rotZ": 0, "camera": "noflip", "bones": false, "display_angle": -90 },
+    "6_26":  { "rotX": -90, "rotY": 10, "rotZ": 0, "camera": "noflip", "bones": false, "display_angle": -90 },
+    "6_29":  { "rotX": -15, "rotY": 70, "rotZ": 0, "camera": "noflip", "bones": false, "display_angle": -60 },
     "6_115-119": { "camera": "noflip", "bones": false, "display_angle": -90, "override": true },
 
     "14_0":         { "camera": "fallback", "standardize": false, "keep_all_meshes": true },

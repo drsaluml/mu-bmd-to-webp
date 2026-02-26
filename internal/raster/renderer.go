@@ -100,9 +100,14 @@ func RenderBMD(
 	fb := NewFrameBuffer(renderSize, renderSize)
 	lc := DefaultLightConfig()
 
-	// Split meshes into opaque, alpha-blend, and additive
-	var opaqueMeshes, alphaBlendMeshes, additiveMeshes []bmd.Mesh
+	// Split meshes into opaque, alpha-blend, additive, and force-additive (unlit)
+	var opaqueMeshes, alphaBlendMeshes, additiveMeshes, forceAdditiveMeshes []bmd.Mesh
 	for i, mesh := range bodyMeshes {
+		// Check per-item additive_textures override first
+		if isForceAdditive(mesh.TexPath, entry) {
+			forceAdditiveMeshes = append(forceAdditiveMeshes, mesh)
+			continue
+		}
 		// Only classify as billboard when there are other body meshes —
 		// a single-mesh model can't be an "overlay" on nothing.
 		// Also skip billboard classification if this mesh has a _R additive
@@ -144,6 +149,29 @@ func RenderBMD(
 	// Pass 3: Additive meshes (no z-buffer, add colors on top)
 	for _, mesh := range additiveMeshes {
 		rasterizeMesh(fb, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendAdditive)
+	}
+
+	// Pass 4: Force-additive meshes — rendered to a separate background
+	// framebuffer then composited UNDER the main content ("dst-over").
+	// The body mesh stays at full brightness; the overlay only shows
+	// through transparent areas where the body doesn't cover.
+	if len(forceAdditiveMeshes) > 0 {
+		bgFB := NewFrameBuffer(renderSize, renderSize)
+		for _, mesh := range forceAdditiveMeshes {
+			rasterizeMesh(bgFB, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendOpaque)
+		}
+		// Remove dark pixels — only keep blue/bright areas as background.
+		// Dark texels (brightness < threshold) become transparent to avoid black aura.
+		for i := 0; i < len(bgFB.Color); i += 4 {
+			if bgFB.Color[i+3] == 0 {
+				continue
+			}
+			r, g, b := int(bgFB.Color[i]), int(bgFB.Color[i+1]), int(bgFB.Color[i+2])
+			if (r+g+b)/3 < 60 {
+				bgFB.Color[i+3] = 0
+			}
+		}
+		compositeUnder(fb, bgFB)
 	}
 
 	// Convert framebuffer to image
@@ -459,6 +487,48 @@ func isTGAPairedGlowJPEG(meshes []bmd.Mesh, idx int, texResolver texture.Resolve
 	w, h := b.Dx(), b.Dy()
 	// Tiny textures (≤32×32) are gradient/glow fills, not body textures
 	return w <= 32 && h <= 32
+}
+
+// compositeUnder composites bg UNDER dst ("dst-over" in Porter-Duff).
+// The background shows through transparent areas of the main buffer.
+// Where main is fully opaque, background is hidden.
+func compositeUnder(dst, bg *FrameBuffer) {
+	for i := 0; i < len(dst.Color); i += 4 {
+		bgA := bg.Color[i+3]
+		if bgA == 0 {
+			continue
+		}
+		dstA := float64(dst.Color[i+3]) / 255.0
+		bgAlpha := float64(bgA) / 255.0 * (1.0 - dstA)
+		if bgAlpha < 1.0/255.0 {
+			continue
+		}
+		dst.Color[i] = clamp255(float64(dst.Color[i]) + float64(bg.Color[i])*bgAlpha)
+		dst.Color[i+1] = clamp255(float64(dst.Color[i+1]) + float64(bg.Color[i+1])*bgAlpha)
+		dst.Color[i+2] = clamp255(float64(dst.Color[i+2]) + float64(bg.Color[i+2])*bgAlpha)
+		newA := dstA + bgAlpha*(1.0-dstA)
+		if newA > 1.0 {
+			newA = 1.0
+		}
+		dst.Color[i+3] = uint8(newA*255.0 + 0.5)
+	}
+}
+
+// isForceAdditive returns true if the mesh's texture stem matches one of the
+// per-item additive_textures overrides (case-insensitive stem match).
+func isForceAdditive(texPath string, entry *trs.Entry) bool {
+	if entry == nil || len(entry.AdditiveTextures) == 0 {
+		return false
+	}
+	base := filepath.Base(strings.ReplaceAll(texPath, "\\", "/"))
+	stem := strings.TrimSuffix(base, filepath.Ext(base))
+	stemLower := strings.ToLower(stem)
+	for _, s := range entry.AdditiveTextures {
+		if strings.ToLower(s) == stemLower {
+			return true
+		}
+	}
+	return false
 }
 
 func averageColor(tex *image.NRGBA) (uint8, uint8, uint8, uint8) {
