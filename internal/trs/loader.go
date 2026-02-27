@@ -81,6 +81,8 @@ type customTRSEntry struct {
 	FlipCanvas       *bool             `json:"flip_canvas"`
 	MirrorPair       *bool             `json:"mirror_pair"`
 	AdditiveTextures []string          `json:"additive_textures"`
+	Tint             []float64         `json:"tint"`
+	TintTextures     []string          `json:"tint_textures"`
 	Merge            *bool             `json:"merge"`
 }
 
@@ -173,6 +175,12 @@ func makeEntry(c customTRSEntry) *Entry {
 	if len(c.AdditiveTextures) > 0 {
 		e.AdditiveTextures = c.AdditiveTextures
 	}
+	if len(c.Tint) == 3 {
+		e.Tint = [3]float64{c.Tint[0], c.Tint[1], c.Tint[2]}
+	}
+	if len(c.TintTextures) > 0 {
+		e.TintTextures = c.TintTextures
+	}
 	return e
 }
 
@@ -229,6 +237,12 @@ func mergeEntryFields(existing *Entry, c customTRSEntry) {
 	}
 	if len(c.AdditiveTextures) > 0 {
 		existing.AdditiveTextures = c.AdditiveTextures
+	}
+	if len(c.Tint) == 3 {
+		existing.Tint = [3]float64{c.Tint[0], c.Tint[1], c.Tint[2]}
+	}
+	if len(c.TintTextures) > 0 {
+		existing.TintTextures = c.TintTextures
 	}
 }
 

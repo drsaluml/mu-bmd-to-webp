@@ -21,6 +21,8 @@ type Entry struct {
 	FlipCanvas       bool              // mirror final image horizontally
 	MirrorPair       bool              // duplicate + mirror to create a pair (e.g. single boot → pair)
 	AdditiveTextures []string          // force these texture stems to additive blending
+	Tint             [3]float64        // RGB color multiplier (0=unused, e.g. [1,0.3,0.3]=red tint)
+	TintTextures     []string          // apply tint only to these texture stems (empty = all meshes)
 }
 
 // Data maps (section, index) to an Entry.

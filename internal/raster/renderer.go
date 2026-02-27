@@ -390,6 +390,13 @@ func rasterizeMesh(
 		tex = texResolver.Resolve(mesh.TexPath)
 	}
 
+	// Apply color tint if specified
+	if entry != nil && tex != nil && (entry.Tint[0] != 0 || entry.Tint[1] != 0 || entry.Tint[2] != 0) {
+		if shouldTintMesh(mesh.TexPath, entry) {
+			tex = applyTint(tex, entry.Tint)
+		}
+	}
+
 	var defR, defG, defB, defA uint8 = 160, 160, 170, 255
 	if tex != nil {
 		defR, defG, defB, defA = averageColor(tex)
@@ -766,6 +773,52 @@ func isForceAdditive(texPath string, entry *trs.Entry) bool {
 		}
 	}
 	return false
+}
+
+// shouldTintMesh returns true if this mesh's texture should receive the tint.
+// If TintTextures is empty, all meshes are tinted. Otherwise, only meshes
+// whose texture stem (case-insensitive) matches one of the listed stems.
+func shouldTintMesh(texPath string, entry *trs.Entry) bool {
+	if len(entry.TintTextures) == 0 {
+		return true
+	}
+	stem := strings.TrimSuffix(filepath.Base(strings.ReplaceAll(texPath, "\\", "/")), filepath.Ext(texPath))
+	stem = strings.ToLower(stem)
+	for _, t := range entry.TintTextures {
+		if strings.ToLower(t) == stem {
+			return true
+		}
+	}
+	return false
+}
+
+// applyTint creates a tinted copy of a texture by multiplying RGB channels.
+func applyTint(src *image.NRGBA, tint [3]float64) *image.NRGBA {
+	b := src.Bounds()
+	dst := image.NewNRGBA(b)
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			i := src.PixOffset(x, y)
+			r := float64(src.Pix[i]) * tint[0]
+			g := float64(src.Pix[i+1]) * tint[1]
+			bl := float64(src.Pix[i+2]) * tint[2]
+			if r > 255 {
+				r = 255
+			}
+			if g > 255 {
+				g = 255
+			}
+			if bl > 255 {
+				bl = 255
+			}
+			j := dst.PixOffset(x, y)
+			dst.Pix[j] = uint8(r)
+			dst.Pix[j+1] = uint8(g)
+			dst.Pix[j+2] = uint8(bl)
+			dst.Pix[j+3] = src.Pix[i+3]
+		}
+	}
+	return dst
 }
 
 func averageColor(tex *image.NRGBA) (uint8, uint8, uint8, uint8) {
