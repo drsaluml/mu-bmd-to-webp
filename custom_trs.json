@@ -41,7 +41,7 @@
     "6":  { "rotX": 0, "rotY": 0, "rotZ": 90, "scale": 0.0025, "bones": false, "override": true, "display_angle": -90, "flip": false, "camera": "noflip" },
     "7":  { "camera": "fallback", "display_angle": -90, "bones": true, "override": true },
     "8":  { "camera": "noflip", "rotX": -85, "rotY": 12, "bones": true, "override": true, "standardize": false },
-    "9":  { "camera": "fallback", "display_angle": -90, "bones": true, "override": true },
+    "9":  { "camera": "noflip", "rotX": -90, "rotY": 0, "rotZ": 0, "bones": true, "override": true, "standardize": false },
     "13": { "camera": "fallback", "standardize": false, "override": true },
     "14": { "camera": "fallback", "display_angle": -90, "override": true },
     "15": { "rotX": -90, "rotY": 80, "rotZ": 0, "camera": "noflip", "standardize": false, "override": true },
