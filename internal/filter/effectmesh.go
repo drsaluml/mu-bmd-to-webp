@@ -30,9 +30,14 @@ var effectPatterns = []string{
 // when resolved (e.g. HQhair_R) they create unwanted body/hair overlays.
 var bodyTextureRE = regexp.MustCompile(`(?i)^(?:` +
 	`hqskin(?:2)?(?:_)?class\d+` + // HQSkinClass313, HQskin2Class314, HQskin_Class109
+	`|skinclass\d+head` + // Skinclass206head_N (face mesh); excludes Skinclass206_headhelmet (underscore before "head")
+	`|nude_class\d+_head` + // nude_class206_head (nude face mesh)
+	`|item\d+_head` + // Item3002_Head (face), Item3002_headhair (hair) — character head in equipment BMDs
 	`|skin_(?:barbarian|warrior|class)` + // skin_barbarian_01, skin_warrior_01, skin_Class107
 	`|level_man\d+` + // level_man01, level_man022, level_man033
 	`|(?:hq)?hair_r` + // hair glow overlay: hair_R (missing) and HQhair_R (resolved)
+	`|cobraset_hair` + // wizard beard (HDK_HelmMale02.bmd)
+	`|tknight_hair` + // knight hair (HelmMale172/177_fighter.bmd)
 	`)`)
 
 // IsBodyMesh returns true if this mesh is a character body/skin/hair mesh.
