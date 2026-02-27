@@ -31,7 +31,7 @@ var effectPatterns = []string{
 var bodyTextureRE = regexp.MustCompile(`(?i)^(?:` +
 	`hqskin(?:2)?(?:_)?class\d+` + // HQSkinClass313, HQskin2Class314, HQskin_Class109
 	`|skinclass\d+head` + // Skinclass206head_N (face mesh); excludes Skinclass206_headhelmet (underscore before "head")
-	`|nude_class\d+_head` + // nude_class206_head (nude face mesh)
+	`|nude_` + // nude_* body/skin underlays (nude_Item1161, nude_Armor, nude_class206_head, etc.)
 	`|item\d+_head` + // Item3002_Head (face), Item3002_headhair (hair) — character head in equipment BMDs
 	`|skin_(?:barbarian|warrior|class)` + // skin_barbarian_01, skin_warrior_01, skin_Class107
 	`|level_man\d+` + // level_man01, level_man022, level_man033
