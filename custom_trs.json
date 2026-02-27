@@ -247,7 +247,7 @@
     "7_3-6":   { "rotX": -65, "rotY": 20, "rotZ": 10, "bones": true, "override": true, "fill_ratio": 0.70, "display_angle": -90, "standardize": false, "flip": false },
     "7_0-427":   { "rotX": -90, "rotY": 20, "rotZ": 0, "bones": true, "override": true, "fill_ratio": 0.60, "display_angle": -90, "standardize": false, "flip": false },
 
-    "8_21":  { "camera": "noflip", "rotX": -85, "rotY": 45, "rotZ": 0, "bones": true, "override": true, "standardize": false },
+    "8_21":  { "camera": "noflip", "rotX": -75, "rotY": 35, "rotZ":0, "bones": true, "override": false, "standardize": false },
     "8_318-334": { "camera": "noflip", "rotX": -60, "rotY": 12, "bones": true, "override": true, "standardize": false ,"additive_textures": ["lightning_4sq", "master10_center"] },
     "8_350": { "camera": "noflip", "rotX": -60, "rotY": 12, "bones": true, "override": true, "standardize": false ,"additive_textures": ["lightning_4sq", "master10_center"] },
     "8_404": { "camera": "noflip", "rotX": -60, "rotY": 12, "bones": true, "override": true, "standardize": false ,"additive_textures": ["lightning_4sq", "master10_center"] },

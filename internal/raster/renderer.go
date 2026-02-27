@@ -252,10 +252,56 @@ func isAlphaOverlay(meshes []bmd.Mesh, idx int, texResolver texture.Resolver) bo
 		}
 		// Similar geometry: both vert and tri counts within 2× of each other (both directions)
 		if tgaV <= jpgV*2 && jpgV <= tgaV*2 && tgaT <= jpgT*2 && jpgT <= tgaT*2 {
-			return true
+			// Also require bounding box overlap — true overlays cover the same
+			// body part. Different body parts (e.g. pants vs boots) may have
+			// similar vertex counts but occupy completely different spatial regions.
+			if meshBBoxOverlap(&meshes[idx], &meshes[i]) {
+				return true
+			}
 		}
 	}
 	return false
+}
+
+// meshBBoxOverlap returns true if the axis-aligned bounding boxes of two meshes
+// overlap in all three axes. Used to confirm that two meshes with similar vertex
+// counts actually cover the same spatial region (true overlays), rather than being
+// different body parts that coincidentally have similar mesh complexity.
+func meshBBoxOverlap(a, b *bmd.Mesh) bool {
+	if len(a.Verts) == 0 || len(b.Verts) == 0 {
+		return false
+	}
+	var aMin, aMax, bMin, bMax [3]float32
+	aMin = a.Verts[0]
+	aMax = a.Verts[0]
+	for _, v := range a.Verts[1:] {
+		for k := 0; k < 3; k++ {
+			if v[k] < aMin[k] {
+				aMin[k] = v[k]
+			}
+			if v[k] > aMax[k] {
+				aMax[k] = v[k]
+			}
+		}
+	}
+	bMin = b.Verts[0]
+	bMax = b.Verts[0]
+	for _, v := range b.Verts[1:] {
+		for k := 0; k < 3; k++ {
+			if v[k] < bMin[k] {
+				bMin[k] = v[k]
+			}
+			if v[k] > bMax[k] {
+				bMax[k] = v[k]
+			}
+		}
+	}
+	for k := 0; k < 3; k++ {
+		if aMax[k] < bMin[k] || bMax[k] < aMin[k] {
+			return false
+		}
+	}
+	return true
 }
 
 // isDuplicateGeometryOverlay returns true if meshes[idx] has the same vertex count,
@@ -404,6 +450,19 @@ func filterGlowLayers(meshes []bmd.Mesh, texResolver texture.Resolver) []bmd.Mes
 		}
 	}
 
+	// Pattern 3: Dark filler textures — tiny (≤16×16), nearly black textures
+	// used as character body/skin placeholders (e.g. hide.jpg 9×9 all-black).
+	// In the game, character body renders underneath; in item renders there's
+	// no body so these create opaque black patches.
+	for i := range meshes {
+		if remove[i] || i == maxTrisIdx {
+			continue
+		}
+		if isDarkFillerTexture(&meshes[i], texResolver) {
+			remove[i] = true
+		}
+	}
+
 	if len(remove) == 0 {
 		return meshes
 	}
@@ -454,6 +513,27 @@ func isBrightGlowJPEG(m *bmd.Mesh, texResolver texture.Resolver) bool {
 		saturation = (maxC - minC) / maxC
 	}
 	return brightness > 180 && saturation < 0.25
+}
+
+// isDarkFillerTexture returns true if a mesh uses a tiny (≤16×16), very dark
+// texture — typically a character body/skin placeholder like hide.jpg (9×9 black).
+// In the game the character body renders underneath showing skin through armor gaps;
+// in isolated item renders there's no body, so these create opaque black patches.
+func isDarkFillerTexture(m *bmd.Mesh, texResolver texture.Resolver) bool {
+	if texResolver == nil {
+		return false
+	}
+	tex := texResolver.Resolve(m.TexPath)
+	if tex == nil {
+		return false
+	}
+	b := tex.Bounds()
+	if b.Dx() > 16 || b.Dy() > 16 {
+		return false
+	}
+	r, g, bl, _ := averageColor(tex)
+	brightness := (float64(r) + float64(g) + float64(bl)) / 3
+	return brightness < 10
 }
 
 // isTGAPairedGlowJPEG returns true if a JPEG mesh in a model with TGA meshes
