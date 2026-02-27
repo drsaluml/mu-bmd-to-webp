@@ -40,7 +40,7 @@
     "5":  { "rotX": -45, "rotY": 40, "rotZ": 90, "scale": 0.0025, "bones": true, "override": true, "fill_ratio": 0.80, "display_angle": -60, "flip": false },
     "6":  { "rotX": 0, "rotY": 0, "rotZ": 90, "scale": 0.0025, "bones": false, "override": true, "display_angle": -90, "flip": false, "camera": "noflip" },
     "7":  { "camera": "fallback", "display_angle": -90, "bones": true, "override": true },
-    "8":  { "camera": "noflip", "rotX": -60, "rotY": 12, "bones": true, "override": true, "standardize": false },
+    "8":  { "camera": "noflip", "rotX": -85, "rotY": 12, "bones": true, "override": true, "standardize": false },
     "9":  { "camera": "fallback", "display_angle": -90, "bones": true, "override": true },
     "13": { "camera": "fallback", "standardize": false, "override": true },
     "14": { "camera": "fallback", "display_angle": -90, "override": true },
@@ -247,6 +247,10 @@
     "7_3-6":   { "rotX": -65, "rotY": 20, "rotZ": 10, "bones": true, "override": true, "fill_ratio": 0.70, "display_angle": -90, "standardize": false, "flip": false },
     "7_0-427":   { "rotX": -90, "rotY": 20, "rotZ": 0, "bones": true, "override": true, "fill_ratio": 0.60, "display_angle": -90, "standardize": false, "flip": false },
 
+    "8_21":  { "camera": "noflip", "rotX": -85, "rotY": 45, "rotZ": 0, "bones": true, "override": true, "standardize": false },
+    "8_318-334": { "camera": "noflip", "rotX": -60, "rotY": 12, "bones": true, "override": true, "standardize": false ,"additive_textures": ["lightning_4sq", "master10_center"] },
+    "8_350": { "camera": "noflip", "rotX": -60, "rotY": 12, "bones": true, "override": true, "standardize": false ,"additive_textures": ["lightning_4sq", "master10_center"] },
+    "8_404": { "camera": "noflip", "rotX": -60, "rotY": 12, "bones": true, "override": true, "standardize": false ,"additive_textures": ["lightning_4sq", "master10_center"] },
 
     "14_0":         { "camera": "fallback", "standardize": false, "keep_all_meshes": true },
     "14_1-9":       "potion",
