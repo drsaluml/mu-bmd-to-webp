@@ -419,7 +419,7 @@
     "12_443":       "wing-12",
     "12_467-469":   "wing-12",
     "12_472-474":   "wing-12",
-    "12_480":       "wing-12",
+    "12_480":       { "rotX": 270, "rotY": 0, "bones": true, "standardize": false, "fill_ratio": 0.90, "keep_all_meshes": true, "tint": [0.3, 0.5, 1.0], "tint_textures": ["Swordeff_mono2line", "fire_15fmono", "fire_sq_00000"] },
     "12_489-490":   "wing-12",
     "12_131":       "wing-12",
     "12_132":       { "rotX": 270, "rotY": -10, "standardize": false, "fill_ratio": 0.80, "additive_textures": ["elfin_wing"] },

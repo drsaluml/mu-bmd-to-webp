@@ -119,6 +119,12 @@ func RenderBMD(
 			forceAdditiveMeshes = append(forceAdditiveMeshes, mesh)
 			continue
 		}
+		// Effect meshes kept by keep_all_meshes → additive blending.
+		// These are glow/energy textures that the game renders additively.
+		if keepAll && filter.IsEffectMesh(&mesh) {
+			additiveMeshes = append(additiveMeshes, mesh)
+			continue
+		}
 		// Only classify as billboard when there are other body meshes —
 		// a single-mesh model can't be an "overlay" on nothing.
 		// Also skip billboard classification if this mesh has a _R additive
