@@ -42,14 +42,14 @@
     "7":  { "camera": "fallback", "display_angle": -90, "bones": true, "override": true },
     "8":  { "camera": "noflip", "rotX": -85, "rotY": 12, "bones": true, "override": true, "standardize": false },
     "9":  { "camera": "noflip", "rotX": -90, "rotY": 0, "rotZ": 0, "bones": true, "override": true, "standardize": false },
+    "11": { "camera": "noflip", "rotX": -90, "rotY": 0, "rotZ": 0, "bones": true, "override": true, "standardize": false },
+    "12": { "display_angle": -90, "bones": true, "merge": true },
     "13": { "camera": "fallback", "standardize": false, "override": true },
     "14": { "camera": "fallback", "display_angle": -90, "override": true },
     "15": { "rotX": -90, "rotY": 80, "rotZ": 0, "camera": "noflip", "standardize": false, "override": true },
     "16": { "camera": "fallback", "standardize": false, "override": true },
     "19": { "camera": "fallback", "standardize": false },
     "20": { "camera": "fallback", "standardize": false },
-    "11": { "camera": "fallback", "display_angle": -90, "bones": true, "override": true },
-    "12": { "display_angle": -90, "bones": true, "merge": true },
     "21": { "rotX": 270, "rotY": -10, "rotZ": 0, "scale": 0.002, "display_angle": -90 }
     
   },
@@ -69,7 +69,6 @@
     "flat":    ["warrant.bmd", "Boss_invitationticket.bmd"],
     "potion":  ["IllusionBead_violet.bmd", "EXPpotion_blue.bmd", "Drink00.bmd"],
     "charm":   ["TempleGuard_anvil.bmd"],
-    "oldboot": ["BootMale01.bmd", "BootMale02.bmd", "BootMale03.bmd", "BootMale04.bmd", "BootMale05.bmd", "BootMale06.bmd", "BootMale07.bmd", "BootMale08.bmd", "BootMale09.bmd"],
     "coin7.bmd": { "rotX": -45, "rotY": 10, "rotZ": 0, "camera": "noflip", "standardize": false }
   },
   "items": {
@@ -251,6 +250,22 @@
     "8_318-334": { "camera": "noflip", "rotX": -60, "rotY": 12, "bones": true, "override": true, "standardize": false ,"additive_textures": ["lightning_4sq", "master10_center"] },
     "8_350": { "camera": "noflip", "rotX": -60, "rotY": 12, "bones": true, "override": true, "standardize": false ,"additive_textures": ["lightning_4sq", "master10_center"] },
     "8_404": { "camera": "noflip", "rotX": -60, "rotY": 12, "bones": true, "override": true, "standardize": false ,"additive_textures": ["lightning_4sq", "master10_center"] },
+
+    "11_0-8": { "camera": "noflip", "rotX": -60, "rotY": 5, "rotZ": 0, "bones": true, "override": true, "standardize": false, "fill_ratio": 0.65, "mirror_pair": true },
+    "11_14-15": { "camera": "noflip", "rotX": -60, "rotY": 5, "rotZ": 0, "bones": true, "override": true, "standardize": false, "fill_ratio": 0.65, "mirror_pair": true },
+    "11_21": { "camera": "noflip", "rotX": -60, "rotY": 5, "rotZ": 0, "bones": true, "override": true, "standardize": false, "fill_ratio": 0.65, "mirror_pair": true },
+    "11_23": { "camera": "noflip", "rotX": -60, "rotY": 5, "rotZ": 0, "bones": true, "override": true, "standardize": false, "fill_ratio": 0.65, "mirror_pair": false },
+    "11_62": { "camera": "noflip", "rotX": -60, "rotY": 5, "rotZ": 0, "bones": true, "override": true, "standardize": false, "fill_ratio": 0.65, "mirror_pair": true },
+    "11_64": { "camera": "noflip", "rotX": -60, "rotY": 5, "rotZ": 0, "bones": true, "override": true, "standardize": false, "fill_ratio": 0.65, "mirror_pair": true },
+    "11_67-68": { "camera": "noflip", "rotX": -60, "rotY": 5, "rotZ": 0, "bones": true, "override": true, "standardize": false, "fill_ratio": 0.65, "mirror_pair": true },
+    "11_130": { "camera": "noflip", "rotX": -60, "rotY": 5, "rotZ": 0, "bones": true, "override": true, "standardize": false, "fill_ratio": 0.65, "mirror_pair": true },
+    "11_132": { "camera": "noflip", "rotX": -60, "rotY": 5, "rotZ": 0, "bones": true, "override": true, "standardize": false, "fill_ratio": 0.65, "mirror_pair": true },
+    "11_206-207": { "camera": "noflip", "rotX": -60, "rotY": 5, "rotZ": 0, "bones": true, "override": true, "standardize": false, "fill_ratio": 0.65, "mirror_pair": true },
+    "11_218": { "camera": "noflip", "rotX": -60, "rotY": 5, "rotZ": 0, "bones": true, "override": true, "standardize": false, "fill_ratio": 0.65, "mirror_pair": true },
+    "11_300": { "camera": "noflip", "rotX": -60, "rotY": 5, "rotZ": 0, "bones": true, "override": true, "standardize": false, "fill_ratio": 0.65, "mirror_pair": true },
+    "11_388": { "camera": "noflip", "rotX": -60, "rotY": 5, "rotZ": 0, "bones": true, "override": true, "standardize": false, "fill_ratio": 0.65, "mirror_pair": true },
+    "11_390": { "camera": "noflip", "rotX": -60, "rotY": 5, "rotZ": 0, "bones": true, "override": true, "standardize": false, "fill_ratio": 0.65, "mirror_pair": true },
+    "11_408": { "camera": "noflip", "rotX": -60, "rotY": 5, "rotZ": 0, "bones": true, "override": true, "standardize": false, "fill_ratio": 0.65, "mirror_pair": true },
 
     "14_0":         { "camera": "fallback", "standardize": false, "keep_all_meshes": true },
     "14_1-9":       "potion",

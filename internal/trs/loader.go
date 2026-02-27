@@ -78,6 +78,7 @@ type customTRSEntry struct {
 	FOV            *float64 `json:"fov"`
 	KeepAllMeshes    *bool             `json:"keep_all_meshes"`
 	FlipCanvas       *bool             `json:"flip_canvas"`
+	MirrorPair       *bool             `json:"mirror_pair"`
 	AdditiveTextures []string          `json:"additive_textures"`
 	Merge            *bool             `json:"merge"`
 }
@@ -162,6 +163,9 @@ func makeEntry(c customTRSEntry) *Entry {
 	if c.FlipCanvas != nil {
 		e.FlipCanvas = *c.FlipCanvas
 	}
+	if c.MirrorPair != nil {
+		e.MirrorPair = *c.MirrorPair
+	}
 	if len(c.AdditiveTextures) > 0 {
 		e.AdditiveTextures = c.AdditiveTextures
 	}
@@ -212,6 +216,9 @@ func mergeEntryFields(existing *Entry, c customTRSEntry) {
 	}
 	if c.FlipCanvas != nil {
 		existing.FlipCanvas = *c.FlipCanvas
+	}
+	if c.MirrorPair != nil {
+		existing.MirrorPair = *c.MirrorPair
 	}
 	if len(c.AdditiveTextures) > 0 {
 		existing.AdditiveTextures = c.AdditiveTextures

@@ -159,6 +159,15 @@ func processItem(cfg Config, item itemlist.ItemDef) Result {
 		img = postprocess.CropAndCenter(img, cfg.RenderSize, fillRatio)
 	}
 
+	// Mirror pair: duplicate + mirror to create a pair (e.g. single boot → pair)
+	if entry != nil && entry.MirrorPair {
+		fillRatio := trs.DefaultFillRatio
+		if entry.FillRatio > 0 {
+			fillRatio = entry.FillRatio
+		}
+		img = postprocess.MirrorPair(img, cfg.RenderSize, fillRatio)
+	}
+
 	// Horizontal canvas flip
 	if entry != nil && entry.FlipCanvas {
 		img = postprocess.FlipHorizontal(img)

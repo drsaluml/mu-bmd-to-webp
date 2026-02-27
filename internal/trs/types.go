@@ -18,6 +18,7 @@ type Entry struct {
 	FOV            float64 // field of view in degrees (default 75)
 	KeepAllMeshes    bool              // skip effect mesh filtering
 	FlipCanvas       bool              // mirror final image horizontally
+	MirrorPair       bool              // duplicate + mirror to create a pair (e.g. single boot → pair)
 	AdditiveTextures []string          // force these texture stems to additive blending
 }
 
