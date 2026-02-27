@@ -435,10 +435,12 @@ func RasterizeTriangleAlphaBlend(
 				continue
 			}
 
-			// Z-depth test (read only, no write)
+			// Z-depth test (read only, no write).
+			// Render if pixel is at same depth or closer than opaque geometry.
+			// ZBuf uses larger-z = closer convention (init=-inf), so skip if behind.
 			z := w0*z0 + w1*z1 + w2*z2
 			zbIdx := rowOff + sx
-			if z > fb.ZBuf[zbIdx] {
+			if z < fb.ZBuf[zbIdx] {
 				continue
 			}
 
