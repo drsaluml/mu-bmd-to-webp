@@ -15,7 +15,7 @@ var effectPatterns = []string{
 	"aura", "shiny", "spark", "fire", "blur",
 	"elec_light", "arrowlight", "lighting_mega", "pin_star",
 	"lightmarks", "light_blue", "light_red",
-	"flame", "energy", "plasma", "shine", "halo", "trail",
+	"energy", "plasma", "shine", "halo", "trail",
 	"gradation", "sdblight", "alpha_line", "4x4", "damage",
 	"ground_wind", "ground_star", "line_of_big",
 	"force", "runeset",
@@ -23,6 +23,11 @@ var effectPatterns = []string{
 	"cursorpin", "empact", "circle_shield",
 	"arrowbom",
 }
+
+// effectPrefixPatterns must match at the START of the texture stem only.
+// "flame" is prefix-only to avoid false positives like "requitalbox_flame_wood"
+// (metal frame of reward box, not a fire effect).
+var effectPrefixPatterns = []string{"flame"}
 
 // bodyTextureRE matches character body/skin/hair texture stems that are NOT part of
 // equipment geometry. These appear in helmet/armor BMDs as the character model
@@ -61,7 +66,12 @@ func IsEffectMesh(m *bmd.Mesh) bool {
 		return true
 	}
 	for _, p := range effectPatterns {
-		if strings.Contains(tex, p) {
+		if strings.Contains(stem, p) {
+			return true
+		}
+	}
+	for _, p := range effectPrefixPatterns {
+		if strings.HasPrefix(stem, p) {
 			return true
 		}
 	}
