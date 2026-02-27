@@ -164,17 +164,10 @@ func RenderBMD(
 		for _, mesh := range forceAdditiveMeshes {
 			rasterizeMesh(bgFB, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendOpaque)
 		}
-		// Remove dark pixels — only keep blue/bright areas as background.
-		// Dark texels (brightness < threshold) become transparent to avoid black aura.
-		for i := 0; i < len(bgFB.Color); i += 4 {
-			if bgFB.Color[i+3] == 0 {
-				continue
-			}
-			r, g, b := int(bgFB.Color[i]), int(bgFB.Color[i+1]), int(bgFB.Color[i+2])
-			if (r+g+b)/3 < 60 {
-				bgFB.Color[i+3] = 0
-			}
-		}
+		// Remove dark background pixels via flood-fill from canvas edges.
+		// Only dark pixels reachable from the border are removed (background).
+		// Interior dark pixels (surrounded by bright content) are preserved.
+		removeBackgroundDark(bgFB, renderSize, 60)
 		compositeUnder(fb, bgFB)
 	}
 
@@ -313,6 +306,12 @@ func isDuplicateGeometryOverlay(meshes []bmd.Mesh, idx int) bool {
 	}
 	m := &meshes[idx]
 	nv, nt := len(m.Verts), len(m.Tris)
+	// TGA meshes with matching geometry are typically symmetric pairs (left/right
+	// fabric, mirrored wings) rather than glow overlays. Glow overlays are JPG-on-JPG.
+	ext := strings.ToLower(filepath.Ext(strings.ReplaceAll(m.TexPath, "\\", "/")))
+	if ext == ".tga" {
+		return false
+	}
 	for j := 0; j < idx; j++ {
 		prev := &meshes[j]
 		if len(prev.Verts) == nv && len(prev.Tris) == nt {
@@ -595,6 +594,125 @@ func compositeUnder(dst, bg *FrameBuffer) {
 			newA = 1.0
 		}
 		dst.Color[i+3] = uint8(newA*255.0 + 0.5)
+	}
+}
+
+// removeBackgroundDark removes dark pixels that are reachable from the canvas
+// border via flood-fill. Interior dark pixels (surrounded by bright content)
+// are preserved. This creates clean background removal without destroying
+// dark details inside the rendered object (e.g. dark wing textures).
+func removeBackgroundDark(fb *FrameBuffer, size int, threshold int) {
+	n := size * size
+	visited := make([]bool, n)
+
+	// isDark checks if pixel at (x,y) is transparent or dark (brightness < threshold).
+	isDark := func(x, y int) bool {
+		i := (y*size + x) * 4
+		if fb.Color[i+3] == 0 {
+			return true // transparent = background
+		}
+		r, g, b := int(fb.Color[i]), int(fb.Color[i+1]), int(fb.Color[i+2])
+		return (r+g+b)/3 < threshold
+	}
+
+	// BFS flood-fill from all border dark pixels
+	queue := make([]int32, 0, size*4)
+	for x := 0; x < size; x++ {
+		for _, y := range []int{0, size - 1} {
+			idx := y*size + x
+			if !visited[idx] && isDark(x, y) {
+				visited[idx] = true
+				queue = append(queue, int32(idx))
+			}
+		}
+	}
+	for y := 1; y < size-1; y++ {
+		for _, x := range []int{0, size - 1} {
+			idx := y*size + x
+			if !visited[idx] && isDark(x, y) {
+				visited[idx] = true
+				queue = append(queue, int32(idx))
+			}
+		}
+	}
+
+	dx := [4]int{-1, 1, 0, 0}
+	dy := [4]int{0, 0, -1, 1}
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+		cx, cy := int(cur)%size, int(cur)/size
+		for d := 0; d < 4; d++ {
+			nx, ny := cx+dx[d], cy+dy[d]
+			if nx < 0 || nx >= size || ny < 0 || ny >= size {
+				continue
+			}
+			nIdx := ny*size + nx
+			if visited[nIdx] {
+				continue
+			}
+			if isDark(nx, ny) {
+				visited[nIdx] = true
+				queue = append(queue, int32(nIdx))
+			}
+		}
+	}
+
+	// Set alpha=0 only for visited (border-reachable dark) pixels
+	for idx := 0; idx < n; idx++ {
+		if visited[idx] {
+			fb.Color[idx*4+3] = 0
+		}
+	}
+
+	// Edge erosion: iteratively fade dark pixels at the content boundary.
+	// Uses a higher threshold (2× flood-fill) to catch the gradient fringe
+	// from JPG textures. Alpha is scaled by brightness/edgeThreshold so
+	// darker edge pixels become more transparent (smooth fade-out).
+	edgeThreshold := threshold * 2 // e.g. 120 for threshold=60
+	for pass := 0; pass < 3; pass++ {
+		type fadePixel struct {
+			idx      int
+			newAlpha uint8
+		}
+		var toFade []fadePixel
+		for y := 0; y < size; y++ {
+			for x := 0; x < size; x++ {
+				i := (y*size + x) * 4
+				if fb.Color[i+3] == 0 {
+					continue
+				}
+				r, g, b := int(fb.Color[i]), int(fb.Color[i+1]), int(fb.Color[i+2])
+				bright := (r + g + b) / 3
+				if bright >= edgeThreshold {
+					continue
+				}
+				// Check 4-neighbors for transparent pixel
+				touchesEdge := false
+				for d := 0; d < 4; d++ {
+					nx, ny := x+dx[d], y+dy[d]
+					if nx < 0 || nx >= size || ny < 0 || ny >= size {
+						touchesEdge = true
+						break
+					}
+					if fb.Color[(ny*size+nx)*4+3] == 0 {
+						touchesEdge = true
+						break
+					}
+				}
+				if touchesEdge {
+					// Scale alpha: brightness 0 → alpha 0, brightness=edgeThreshold → keep
+					newA := uint8(int(fb.Color[i+3]) * bright / edgeThreshold)
+					toFade = append(toFade, fadePixel{i, newA})
+				}
+			}
+		}
+		if len(toFade) == 0 {
+			break
+		}
+		for _, fp := range toFade {
+			fb.Color[fp.idx+3] = fp.newAlpha
+		}
 	}
 }
 
