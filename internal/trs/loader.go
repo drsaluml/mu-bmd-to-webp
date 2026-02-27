@@ -76,6 +76,7 @@ type customTRSEntry struct {
 	Camera       *string  `json:"camera"`
 	Perspective    *bool    `json:"perspective"`
 	FOV            *float64 `json:"fov"`
+	CamHeight      *float64 `json:"cam_height"`
 	KeepAllMeshes    *bool             `json:"keep_all_meshes"`
 	FlipCanvas       *bool             `json:"flip_canvas"`
 	MirrorPair       *bool             `json:"mirror_pair"`
@@ -157,6 +158,9 @@ func makeEntry(c customTRSEntry) *Entry {
 	if c.FOV != nil {
 		e.FOV = *c.FOV
 	}
+	if c.CamHeight != nil {
+		e.CamHeight = *c.CamHeight
+	}
 	if c.KeepAllMeshes != nil {
 		e.KeepAllMeshes = *c.KeepAllMeshes
 	}
@@ -210,6 +214,9 @@ func mergeEntryFields(existing *Entry, c customTRSEntry) {
 	}
 	if c.FOV != nil {
 		existing.FOV = *c.FOV
+	}
+	if c.CamHeight != nil {
+		existing.CamHeight = *c.CamHeight
 	}
 	if c.KeepAllMeshes != nil {
 		existing.KeepAllMeshes = *c.KeepAllMeshes

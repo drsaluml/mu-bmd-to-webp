@@ -100,6 +100,13 @@ func RenderBMD(
 	margin := 16 * supersample
 	scale := float64(renderSize-2*margin) / span
 
+	// Positioned camera: when cam_height is set, use parallax perspective
+	// that makes depth-axis geometry visible (e.g. fabric hanging down).
+	var posCamera *viewmatrix.PosCamera
+	if entry != nil && entry.CamHeight != 0 {
+		posCamera = viewmatrix.SetupPosCamera(bodyMeshes, R, entry, renderSize, margin)
+	}
+
 	// Allocate framebuffer
 	fb := NewFrameBuffer(renderSize, renderSize)
 	lc := DefaultLightConfig()
@@ -121,7 +128,7 @@ func RenderBMD(
 			additiveMeshes = append(additiveMeshes, mesh)
 		} else if isTGAPairedGlowJPEG(bodyMeshes, i, texResolver) {
 			additiveMeshes = append(additiveMeshes, mesh)
-		} else if isAlphaOverlay(bodyMeshes, i, texResolver) {
+		} else if isAlphaOverlay(bodyMeshes, i, texResolver, entry) {
 			alphaBlendMeshes = append(alphaBlendMeshes, mesh)
 		} else {
 			opaqueMeshes = append(opaqueMeshes, mesh)
@@ -142,17 +149,17 @@ func RenderBMD(
 
 	// Pass 1: Opaque meshes (normal z-buffer rendering)
 	for _, mesh := range opaqueMeshes {
-		rasterizeMesh(fb, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendOpaque)
+		rasterizeMesh(fb, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendOpaque, posCamera)
 	}
 
 	// Pass 2: Alpha-blend meshes (z-read but no z-write, alpha composite)
 	for _, mesh := range alphaBlendMeshes {
-		rasterizeMesh(fb, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendAlpha)
+		rasterizeMesh(fb, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendAlpha, posCamera)
 	}
 
 	// Pass 3: Additive meshes (no z-buffer, add colors on top)
 	for _, mesh := range additiveMeshes {
-		rasterizeMesh(fb, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendAdditive)
+		rasterizeMesh(fb, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendAdditive, posCamera)
 	}
 
 	// Pass 4: Force-additive meshes — rendered to a separate background
@@ -162,7 +169,7 @@ func RenderBMD(
 	if len(forceAdditiveMeshes) > 0 {
 		bgFB := NewFrameBuffer(renderSize, renderSize)
 		for _, mesh := range forceAdditiveMeshes {
-			rasterizeMesh(bgFB, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendOpaque)
+			rasterizeMesh(bgFB, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendOpaque, posCamera)
 		}
 		// Remove dark background pixels via flood-fill from canvas edges.
 		// Only dark pixels reachable from the border are removed (background).
@@ -213,7 +220,8 @@ const (
 // which distinguishes overlay pairs from models where TGA is the main body
 // (e.g. CW_Bow.bmd: TGA 182v/310t vs JPEG 103v/150t — tri ratio 2.07× exceeds 2×).
 // Skips JPEG meshes with tiny textures (≤32×32) as those are glow fills, not bodies.
-func isAlphaOverlay(meshes []bmd.Mesh, idx int, texResolver texture.Resolver) bool {
+// Skips JPEG meshes that are force-additive (per-item additive_textures override).
+func isAlphaOverlay(meshes []bmd.Mesh, idx int, texResolver texture.Resolver, entry *trs.Entry) bool {
 	ext := strings.ToLower(filepath.Ext(strings.ReplaceAll(meshes[idx].TexPath, "\\", "/")))
 	if ext != ".tga" {
 		return false
@@ -231,6 +239,10 @@ func isAlphaOverlay(meshes []bmd.Mesh, idx int, texResolver texture.Resolver) bo
 		jpgV := len(meshes[i].Verts)
 		jpgT := len(meshes[i].Tris)
 		if jpgV == 0 || jpgT == 0 {
+			continue
+		}
+		// Skip JPEG meshes that are force-additive — they're dark overlays, not body meshes
+		if isForceAdditive(meshes[i].TexPath, entry) {
 			continue
 		}
 		// Skip JPEG meshes with tiny textures — those are glow fills, not body meshes
@@ -257,9 +269,11 @@ func isAlphaOverlay(meshes []bmd.Mesh, idx int, texResolver texture.Resolver) bo
 }
 
 // meshBBoxOverlap returns true if the axis-aligned bounding boxes of two meshes
-// overlap in all three axes. Used to confirm that two meshes with similar vertex
-// counts actually cover the same spatial region (true overlays), rather than being
-// different body parts that coincidentally have similar mesh complexity.
+// have significant overlap in all three axes. A true alpha overlay (TGA on JPEG)
+// covers the same spatial region, so the overlap in each axis should be at least
+// 40% of the larger span. This rejects false positives where separate parts
+// (e.g. feathers vs connectors) coincidentally have similar vertex counts but
+// occupy different spatial regions with only marginal bbox intersection.
 func meshBBoxOverlap(a, b *bmd.Mesh) bool {
 	if len(a.Verts) == 0 || len(b.Verts) == 0 {
 		return false
@@ -289,9 +303,30 @@ func meshBBoxOverlap(a, b *bmd.Mesh) bool {
 			}
 		}
 	}
+	const minOverlapRatio = 0.40
 	for k := 0; k < 3; k++ {
-		if aMax[k] < bMin[k] || bMax[k] < aMin[k] {
-			return false
+		spanA := aMax[k] - aMin[k]
+		spanB := bMax[k] - bMin[k]
+		maxSpan := spanA
+		if spanB > maxSpan {
+			maxSpan = spanB
+		}
+		if maxSpan < 0.001 {
+			continue // skip degenerate axis (both flat)
+		}
+		overlapMin := aMin[k]
+		if bMin[k] > overlapMin {
+			overlapMin = bMin[k]
+		}
+		overlapMax := aMax[k]
+		if bMax[k] < overlapMax {
+			overlapMax = bMax[k]
+		}
+		if overlapMax <= overlapMin {
+			return false // no overlap at all
+		}
+		if float64(overlapMax-overlapMin)/float64(maxSpan) < minOverlapRatio {
+			return false // overlap too small
 		}
 	}
 	return true
@@ -342,13 +377,13 @@ func rasterizeMesh(
 	fb *FrameBuffer, mesh *bmd.Mesh,
 	R mathutil.Mat3, center [3]float64, scale float64, renderSize int,
 	entry *trs.Entry, texResolver texture.Resolver, lc *LightConfig,
-	blendMode int,
+	blendMode int, posCamera *viewmatrix.PosCamera,
 ) {
 	if len(mesh.Verts) == 0 {
 		return
 	}
 
-	px, py, pz := viewmatrix.ProjectVertices(mesh.Verts, R, center, scale, renderSize, entry)
+	px, py, pz := viewmatrix.ProjectVertices(mesh.Verts, R, center, scale, renderSize, entry, posCamera)
 
 	var tex *image.NRGBA
 	if texResolver != nil {

@@ -89,9 +89,147 @@ func ShouldUseBones(entry *trs.Entry) bool {
 	return true
 }
 
+// PosCamera holds pre-computed positioned camera parameters.
+// Unlike the standard centered perspective (which just scales by depth),
+// a positioned camera creates parallax: vertices at different depths project
+// to different screen Y positions, making depth-axis geometry visible.
+type PosCamera struct {
+	CamH    float64 // camera height offset above model center
+	CamDist float64 // camera distance from model center along Z
+	LookLen float64 // distance from camera to model center
+
+	// Model center in rotated 3D space
+	CenterX, CenterY, CenterZ float64
+
+	// Pre-computed projected 2D center and scale for canvas mapping
+	ProjCenterX, ProjCenterY float64
+	ProjScale                float64
+}
+
+// SetupPosCamera computes positioned camera parameters from the bounding box of all meshes.
+// camHeight is a fraction of model Y-span (e.g. 0.3 = camera 30% of model height above center).
+func SetupPosCamera(bodyMeshes []bmd.Mesh, R mathutil.Mat3, entry *trs.Entry, renderSize, margin int) *PosCamera {
+	// Compute 3D bounds of all rotated vertices
+	var allMin, allMax [3]float64
+	allMin = [3]float64{math.Inf(1), math.Inf(1), math.Inf(1)}
+	allMax = [3]float64{math.Inf(-1), math.Inf(-1), math.Inf(-1)}
+	for _, m := range bodyMeshes {
+		for _, v := range m.Verts {
+			tv := R.MulVec3(mathutil.Vec3{float64(v[0]), float64(v[1]), float64(v[2])})
+			for k := 0; k < 3; k++ {
+				if tv[k] < allMin[k] {
+					allMin[k] = tv[k]
+				}
+				if tv[k] > allMax[k] {
+					allMax[k] = tv[k]
+				}
+			}
+		}
+	}
+
+	cx := (allMin[0] + allMax[0]) / 2
+	cy := (allMin[1] + allMax[1]) / 2
+	cz := (allMin[2] + allMax[2]) / 2
+	spanY := allMax[1] - allMin[1]
+
+	camH := entry.CamHeight * spanY
+
+	fov := entry.FOV
+	if fov == 0 {
+		fov = trs.DefaultFOV
+	}
+	halfFOV := mathutil.Deg2Rad(fov / 2)
+
+	// Use half the larger of X/Y span to compute camera distance from FOV
+	xyMax := math.Max((allMax[0]-allMin[0])/2, spanY/2)
+	if xyMax < 0.001 {
+		xyMax = 0.001
+	}
+	camDist := xyMax / math.Tan(halfFOV)
+
+	lookLen := math.Sqrt(camH*camH + camDist*camDist)
+	if lookLen < 0.001 {
+		lookLen = 0.001
+	}
+
+	pc := &PosCamera{
+		CamH:    camH,
+		CamDist: camDist,
+		LookLen: lookLen,
+		CenterX: cx,
+		CenterY: cy,
+		CenterZ: cz,
+	}
+
+	// Project all vertices to find 2D bounds
+	var projMinX, projMaxX, projMinY, projMaxY float64
+	projMinX, projMinY = math.Inf(1), math.Inf(1)
+	projMaxX, projMaxY = math.Inf(-1), math.Inf(-1)
+	for _, m := range bodyMeshes {
+		for _, v := range m.Verts {
+			tv := R.MulVec3(mathutil.Vec3{float64(v[0]), float64(v[1]), float64(v[2])})
+			sx, sy := pc.project(tv)
+			if sx < projMinX {
+				projMinX = sx
+			}
+			if sx > projMaxX {
+				projMaxX = sx
+			}
+			if sy < projMinY {
+				projMinY = sy
+			}
+			if sy > projMaxY {
+				projMaxY = sy
+			}
+		}
+	}
+
+	pc.ProjCenterX = (projMinX + projMaxX) / 2
+	pc.ProjCenterY = (projMinY + projMaxY) / 2
+
+	projSpan := math.Max(projMaxX-projMinX, projMaxY-projMinY)
+	if projSpan < 0.001 {
+		projSpan = 0.001
+	}
+	pc.ProjScale = float64(renderSize-2*margin) / projSpan
+
+	return pc
+}
+
+// project transforms a single rotated vertex to 2D screen coordinates (before canvas centering).
+// Camera at (cx, cy+camH, cz+camDist) looking at (cx, cy, cz).
+func (pc *PosCamera) project(tv mathutil.Vec3) (float64, float64) {
+	// Vertex relative to camera position
+	rx := tv[0] - pc.CenterX
+	ry := tv[1] - pc.CenterY - pc.CamH
+	rz := tv[2] - pc.CenterZ - pc.CamDist
+
+	// LookAt rotation: camera at (0, camH, camDist) looking at origin.
+	// Forward = normalize(0, -camH, -camDist)
+	// Right   = (1, 0, 0)
+	// Up      = (0, camDist/lookLen, -camH/lookLen)
+	// -Fwd    = (0, camH/lookLen, camDist/lookLen)
+	//
+	// Camera-space: right=X, up=Y, -forward=Z
+	camX := rx
+	camY := (pc.CamDist*ry - pc.CamH*rz) / pc.LookLen
+	camZ := (pc.CamH*ry + pc.CamDist*rz) / pc.LookLen
+
+	// Perspective division (camera looks along -Z; visible objects have camZ < 0)
+	depth := -camZ
+	if depth < 0.1 {
+		depth = 0.1
+	}
+	factor := pc.LookLen / depth
+
+	// Negate camY for screen coords (camera Y-up → screen Y-down)
+	return camX * factor, -camY * factor
+}
+
 // ProjectVertices transforms 3D vertices to 2D screen coordinates.
 // Returns px, py, pz slices (screen X, screen Y, depth).
-func ProjectVertices(verts [][3]float32, R mathutil.Mat3, center [3]float64, scale float64, renderSize int, entry *trs.Entry) ([]float64, []float64, []float64) {
+// When posCamera is non-nil, uses positioned camera perspective instead of the standard projection.
+func ProjectVertices(verts [][3]float32, R mathutil.Mat3, center [3]float64, scale float64, renderSize int, entry *trs.Entry, posCamera *PosCamera) ([]float64, []float64, []float64) {
 	n := len(verts)
 	px := make([]float64, n)
 	py := make([]float64, n)
@@ -99,7 +237,21 @@ func ProjectVertices(verts [][3]float32, R mathutil.Mat3, center [3]float64, sca
 
 	half := float64(renderSize) / 2
 
-	// Perspective setup
+	// Positioned camera path: full parallax perspective from an elevated camera
+	if posCamera != nil {
+		for i := range verts {
+			v := mathutil.Vec3{float64(verts[i][0]), float64(verts[i][1]), float64(verts[i][2])}
+			tv := R.MulVec3(v)
+
+			sx, sy := posCamera.project(tv)
+			px[i] = (sx-posCamera.ProjCenterX)*posCamera.ProjScale + half
+			py[i] = (sy-posCamera.ProjCenterY)*posCamera.ProjScale + half
+			pz[i] = tv[2]
+		}
+		return px, py, pz
+	}
+
+	// Standard perspective setup
 	usePersp := entry != nil && entry.Perspective
 	var perspCamDist, perspZCenter float64
 	if usePersp {

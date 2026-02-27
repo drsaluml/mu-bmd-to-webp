@@ -337,6 +337,7 @@
     "12_51-52":       "pet-12"  ,
     "12_93-94":       "pet-12"  ,
 
+    "12_70-72":         "seed-12",
     "12_100-129":         "seed-12",
     "12_311-400":         "seed-12",
 
@@ -381,7 +382,7 @@
     "12_184":       "cape-12",
     "12_186":       { "rotX": 270, "rotY": 0, "bones": true, "standardize": false, "fill_ratio": 0.80, "additive_textures": ["Fifth_Rage_Cape_04", "fire_16fmono2"], "keep_all_meshes": false },
     "12_187":       { "rotX": 270, "rotY": 0, "bones": true, "standardize": false, "fill_ratio": 0.80, "additive_textures": ["Fifth_Grow_cape_05"] },
-    "12_191": { "camera": "fallback", "bones": true, "standardize": false, "fill_ratio": 0.80, "perspective": true, "fov": 75, "additive_textures": ["Fifth_Kundun_cape_05", "Fifth_Kundun_cape_07"] },
+    "12_191": { "rotX": 270, "rotY": 0, "bones": true, "standardize": false, "fill_ratio": 0.80, "additive_textures": ["Fifth_Kundun_cape_05", "Fifth_Kundun_cape_07"] },
     "12_193":       { "rotX": 270, "rotY": 0, "bones": true, "standardize": false, "fill_ratio": 0.80, "additive_textures": ["Fifth_Illusion_cape_04"] },
     "12_262":       "cape-12",
     "12_269-270":   "cape-12",

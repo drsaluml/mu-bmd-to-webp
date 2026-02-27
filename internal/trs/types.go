@@ -16,6 +16,7 @@ type Entry struct {
 	Camera       string  // "", "noflip", "correction", "fallback"
 	Perspective    bool    // enable perspective projection
 	FOV            float64 // field of view in degrees (default 75)
+	CamHeight      float64 // positioned camera: height offset as fraction of model Y-span (0 = disabled)
 	KeepAllMeshes    bool              // skip effect mesh filtering
 	FlipCanvas       bool              // mirror final image horizontally
 	MirrorPair       bool              // duplicate + mirror to create a pair (e.g. single boot → pair)
