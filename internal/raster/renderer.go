@@ -24,14 +24,18 @@ func RenderBMD(
 	size int,
 	supersample int,
 ) *image.NRGBA {
-	// Pre-filter effect meshes on raw geometry (before bone transforms distort shapes)
+	// Pre-filter effect meshes and body meshes on raw geometry (before bone transforms distort shapes)
 	keepAll := entry != nil && entry.KeepAllMeshes
 	if !keepAll {
 		var nonEffect []bmd.Mesh
 		for i := range meshes {
-			if !filter.IsEffectMesh(&meshes[i]) {
-				nonEffect = append(nonEffect, meshes[i])
+			if filter.IsEffectMesh(&meshes[i]) {
+				continue
 			}
+			if filter.IsBodyMesh(&meshes[i]) {
+				continue
+			}
+			nonEffect = append(nonEffect, meshes[i])
 		}
 		if len(nonEffect) > 0 {
 			meshes = nonEffect

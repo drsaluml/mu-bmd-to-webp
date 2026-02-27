@@ -24,6 +24,28 @@ var effectPatterns = []string{
 	"arrowbom",
 }
 
+// bodyTextureRE matches character body/skin/hair texture stems that are NOT part of
+// equipment geometry. These appear in helmet/armor BMDs as the character model
+// underneath the equipment piece. When unresolvable they render as gray blobs;
+// when resolved (e.g. HQhair_R) they create unwanted body/hair overlays.
+var bodyTextureRE = regexp.MustCompile(`(?i)^(?:` +
+	`hqskin(?:2)?(?:_)?class\d+` + // HQSkinClass313, HQskin2Class314, HQskin_Class109
+	`|skin_(?:barbarian|warrior|class)` + // skin_barbarian_01, skin_warrior_01, skin_Class107
+	`|level_man\d+` + // level_man01, level_man022, level_man033
+	`|(?:hq)?hair_r` + // hair glow overlay: hair_R (missing) and HQhair_R (resolved)
+	`)`)
+
+// IsBodyMesh returns true if this mesh is a character body/skin/hair mesh.
+// These appear in helmet/armor BMDs as the character model underneath the
+// equipment piece. Detected by texture name pattern — these names are specific
+// to character models (HQSkinClass*, skin_barbarian*, level_man*, hair_R)
+// and never used for equipment textures.
+func IsBodyMesh(m *bmd.Mesh) bool {
+	tex := strings.ToLower(m.TexPath)
+	stem := strings.TrimSuffix(filepath.Base(strings.ReplaceAll(tex, "\\", "/")), filepath.Ext(tex))
+	return bodyTextureRE.MatchString(stem)
+}
+
 // IsEffectMesh returns true if this mesh is an aura/glow/effect overlay.
 func IsEffectMesh(m *bmd.Mesh) bool {
 	tex := strings.ToLower(m.TexPath)
