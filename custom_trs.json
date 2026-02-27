@@ -39,6 +39,7 @@
     "4":  { "rotX": -45, "rotY": 40, "rotZ": 90, "scale": 0.0025, "bones": true, "override": true, "fill_ratio": 0.80, "display_angle": -60, "flip": false },
     "5":  { "rotX": -45, "rotY": 40, "rotZ": 90, "scale": 0.0025, "bones": true, "override": true, "fill_ratio": 0.80, "display_angle": -60, "flip": false },
     "6":  { "rotX": 0, "rotY": 0, "rotZ": 90, "scale": 0.0025, "bones": false, "override": true, "display_angle": -90, "flip": false, "camera": "noflip" },
+    "7":  { "camera": "fallback", "display_angle": -90, "bones": true, "override": true },
     "13": { "camera": "fallback", "standardize": false, "override": true },
     "14": { "camera": "fallback", "display_angle": -90, "override": true },
     "15": { "rotX": -90, "rotY": 80, "rotZ": 0, "camera": "noflip", "standardize": false, "override": true },
@@ -240,6 +241,10 @@
     "6_114": "shield_yflat_b",
 
     "6_115-119": { "camera": "noflip", "bones": false, "display_angle": -90, "override": true },
+
+    "7_0-2":   { "rotX": -60, "rotY": 20, "rotZ": 0, "bones": true, "override": true, "fill_ratio": 0.70, "display_angle": -90, "standardize": false, "flip": false },
+    "7_3-6":   { "rotX": -65, "rotY": 20, "rotZ": 10, "bones": true, "override": true, "fill_ratio": 0.70, "display_angle": -90, "standardize": false, "flip": false },
+    "7_0-427":   { "rotX": -90, "rotY": 20, "rotZ": 0, "bones": true, "override": true, "fill_ratio": 0.60, "display_angle": -90, "standardize": false, "flip": false },
 
     "14_0":         { "camera": "fallback", "standardize": false, "keep_all_meshes": true },
     "14_1-9":       "potion",
