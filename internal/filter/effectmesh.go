@@ -21,7 +21,7 @@ var effectPatterns = []string{
 	"force", "runeset",
 	"shockwave", "swordeff",
 	"cursorpin", "empact", "circle_shield",
-	"arrowbom",
+	"arrowbom", "raypiece",
 }
 
 // effectPrefixPatterns must match at the START of the texture stem only.

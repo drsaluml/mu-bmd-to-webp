@@ -35,6 +35,9 @@ func RenderBMD(
 			if filter.IsBodyMesh(&meshes[i]) {
 				continue
 			}
+			if isExcludedTexture(meshes[i].TexPath, entry) {
+				continue
+			}
 			nonEffect = append(nonEffect, meshes[i])
 		}
 		if len(nonEffect) > 0 {
@@ -53,7 +56,8 @@ func RenderBMD(
 	// Bone transforms
 	useBones := viewmatrix.ShouldUseBones(entry)
 	if useBones {
-		skeleton.ApplyTransforms(meshes, bones)
+		boneFlip := entry != nil && entry.BoneFlip
+		skeleton.ApplyTransforms(meshes, bones, boneFlip)
 	}
 
 	// Compute view matrix + filter components
@@ -827,6 +831,23 @@ func removeBackgroundDark(fb *FrameBuffer, size int, threshold int) {
 			fb.Color[fp.idx+3] = fp.newAlpha
 		}
 	}
+}
+
+// isExcludedTexture returns true if the mesh's texture stem matches one of the
+// per-item exclude_textures overrides (case-insensitive stem match).
+func isExcludedTexture(texPath string, entry *trs.Entry) bool {
+	if entry == nil || len(entry.ExcludeTextures) == 0 {
+		return false
+	}
+	base := filepath.Base(strings.ReplaceAll(texPath, "\\", "/"))
+	stem := strings.TrimSuffix(base, filepath.Ext(base))
+	stemLower := strings.ToLower(stem)
+	for _, s := range entry.ExcludeTextures {
+		if strings.ToLower(s) == stemLower {
+			return true
+		}
+	}
+	return false
 }
 
 // isForceAdditive returns true if the mesh's texture stem matches one of the

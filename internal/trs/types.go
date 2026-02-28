@@ -19,8 +19,10 @@ type Entry struct {
 	CamHeight      float64 // positioned camera: height offset as fraction of model Y-span (0 = disabled)
 	KeepAllMeshes    bool              // skip effect mesh filtering
 	FlipCanvas       bool              // mirror final image horizontally
+	BoneFlip         bool              // prefix root bone matrices with Rx(-90°) to match BMD-viewer group inheritance
 	MirrorPair       bool              // duplicate + mirror to create a pair (e.g. single boot → pair)
 	AdditiveTextures []string          // force these texture stems to additive blending
+	ExcludeTextures  []string          // exclude meshes with these texture stems from rendering
 	Tint             [3]float64        // RGB color multiplier (0=unused, e.g. [1,0.3,0.3]=red tint)
 	TintTextures     []string          // apply tint only to these texture stems (empty = all meshes)
 }

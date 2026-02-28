@@ -79,8 +79,10 @@ type customTRSEntry struct {
 	CamHeight      *float64 `json:"cam_height"`
 	KeepAllMeshes    *bool             `json:"keep_all_meshes"`
 	FlipCanvas       *bool             `json:"flip_canvas"`
+	BoneFlip         *bool             `json:"bone_flip"`
 	MirrorPair       *bool             `json:"mirror_pair"`
 	AdditiveTextures []string          `json:"additive_textures"`
+	ExcludeTextures  []string          `json:"exclude_textures"`
 	Tint             []float64         `json:"tint"`
 	TintTextures     []string          `json:"tint_textures"`
 	Merge            *bool             `json:"merge"`
@@ -169,11 +171,17 @@ func makeEntry(c customTRSEntry) *Entry {
 	if c.FlipCanvas != nil {
 		e.FlipCanvas = *c.FlipCanvas
 	}
+	if c.BoneFlip != nil {
+		e.BoneFlip = *c.BoneFlip
+	}
 	if c.MirrorPair != nil {
 		e.MirrorPair = *c.MirrorPair
 	}
 	if len(c.AdditiveTextures) > 0 {
 		e.AdditiveTextures = c.AdditiveTextures
+	}
+	if len(c.ExcludeTextures) > 0 {
+		e.ExcludeTextures = c.ExcludeTextures
 	}
 	if len(c.Tint) == 3 {
 		e.Tint = [3]float64{c.Tint[0], c.Tint[1], c.Tint[2]}
@@ -232,11 +240,17 @@ func mergeEntryFields(existing *Entry, c customTRSEntry) {
 	if c.FlipCanvas != nil {
 		existing.FlipCanvas = *c.FlipCanvas
 	}
+	if c.BoneFlip != nil {
+		existing.BoneFlip = *c.BoneFlip
+	}
 	if c.MirrorPair != nil {
 		existing.MirrorPair = *c.MirrorPair
 	}
 	if len(c.AdditiveTextures) > 0 {
 		existing.AdditiveTextures = c.AdditiveTextures
+	}
+	if len(c.ExcludeTextures) > 0 {
+		existing.ExcludeTextures = c.ExcludeTextures
 	}
 	if len(c.Tint) == 3 {
 		existing.Tint = [3]float64{c.Tint[0], c.Tint[1], c.Tint[2]}

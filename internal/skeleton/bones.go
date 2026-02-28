@@ -3,14 +3,22 @@ package skeleton
 import (
 	"mu-bmd-renderer/internal/bmd"
 	"mu-bmd-renderer/internal/mathutil"
+	"math"
 )
 
 // BuildWorldMatrices computes the world transform for each bone using bind pose (frame 0, action 0).
-// Returns a slice of 4×4 matrices indexed by bone index.
-func BuildWorldMatrices(bones []bmd.Bone) []mathutil.Mat4 {
+// If boneFlip is true, root bone matrices are prefixed with Rx(-90°) to match
+// BMD-viewer's Three.js group inheritance (group.rotation.x = -PI/2).
+func BuildWorldMatrices(bones []bmd.Bone, boneFlip bool) []mathutil.Mat4 {
 	worlds := make([]mathutil.Mat4, len(bones))
 	for i := range worlds {
 		worlds[i] = mathutil.Mat4Identity()
+	}
+
+	// Rx(-90°) as Mat4 for root bone prefix
+	var rx90 mathutil.Mat4
+	if boneFlip {
+		rx90 = mathutil.FromMat3Translation(mathutil.RotX(-math.Pi/2), mathutil.Vec3{0, 0, 0})
 	}
 
 	for i, bone := range bones {
@@ -28,7 +36,12 @@ func BuildWorldMatrices(bones []bmd.Bone) []mathutil.Mat4 {
 		if bone.Parent >= 0 && bone.Parent < i {
 			worlds[i] = mathutil.Mat4Mul(worlds[bone.Parent], local)
 		} else {
-			worlds[i] = local
+			// Root bone
+			if boneFlip {
+				worlds[i] = mathutil.Mat4Mul(rx90, local)
+			} else {
+				worlds[i] = local
+			}
 		}
 	}
 
@@ -37,12 +50,12 @@ func BuildWorldMatrices(bones []bmd.Bone) []mathutil.Mat4 {
 
 // ApplyTransforms modifies mesh vertex positions in-place using bone world matrices.
 // Rigid skinning: 1 bone per vertex, weight = 1.0.
-func ApplyTransforms(meshes []bmd.Mesh, bones []bmd.Bone) {
+func ApplyTransforms(meshes []bmd.Mesh, bones []bmd.Bone, boneFlip bool) {
 	if len(bones) == 0 {
 		return
 	}
 
-	worlds := BuildWorldMatrices(bones)
+	worlds := BuildWorldMatrices(bones, boneFlip)
 
 	// Check if all matrices are identity (skip if so)
 	allIdentity := true
