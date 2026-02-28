@@ -29,7 +29,7 @@ func RenderBMD(
 	if !keepAll {
 		var nonEffect []bmd.Mesh
 		for i := range meshes {
-			if filter.IsEffectMesh(&meshes[i]) {
+			if filter.IsEffectMesh(&meshes[i]) && !isForceAdditive(meshes[i].TexPath, entry) {
 				continue
 			}
 			if filter.IsBodyMesh(&meshes[i]) {
@@ -177,10 +177,11 @@ func RenderBMD(
 		for _, mesh := range forceAdditiveMeshes {
 			rasterizeMesh(bgFB, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendOpaque, posCamera)
 		}
-		// Remove dark background pixels via flood-fill from canvas edges.
-		// Only dark pixels reachable from the border are removed (background).
-		// Interior dark pixels (surrounded by bright content) are preserved.
-		removeBackgroundDark(bgFB, renderSize, 60)
+		// Convert opaque-rendered pixels to luminance-based alpha.
+		// Dark pixels → low alpha (nearly transparent), bright pixels → high alpha.
+		// Then flood-fill from edges cleans up remaining semi-transparent border pixels.
+		luminanceAlpha(bgFB, renderSize)
+		removeBackgroundDark(bgFB, renderSize, 40)
 		compositeUnder(fb, bgFB)
 	}
 
@@ -353,13 +354,32 @@ func isDuplicateGeometryOverlay(meshes []bmd.Mesh, idx int) bool {
 	if ext == ".tga" {
 		return false
 	}
+	stem := texStemBase(m.TexPath)
 	for j := 0; j < idx; j++ {
 		prev := &meshes[j]
 		if len(prev.Verts) == nv && len(prev.Tris) == nt {
-			return true
+			// Require texture stems to share a common base after stripping
+			// trailing digits. This avoids false positives where the same
+			// geometry carries two unrelated textures (e.g. Cove_spear / Cove_bow).
+			prevStem := texStemBase(prev.TexPath)
+			if stem == prevStem {
+				return true
+			}
 		}
 	}
 	return false
+}
+
+// texStemBase returns the lowercase texture stem with trailing digits removed.
+// "effect01.jpg" → "effect", "Cove_spear.jpg" → "cove_spear".
+func texStemBase(texPath string) string {
+	p := strings.ReplaceAll(texPath, "\\", "/")
+	stem := strings.TrimSuffix(filepath.Base(p), filepath.Ext(p))
+	stem = strings.ToLower(stem)
+	for len(stem) > 0 && stem[len(stem)-1] >= '0' && stem[len(stem)-1] <= '9' {
+		stem = stem[:len(stem)-1]
+	}
+	return stem
 }
 
 // hasAdditiveCounterpart returns true if another mesh in the model has the _R suffix
@@ -510,6 +530,19 @@ func filterGlowLayers(meshes []bmd.Mesh, texResolver texture.Resolver) []bmd.Mes
 		}
 	}
 
+	// Pattern 4: Meshes with unresolved (MISSING) textures.
+	// These always render as solid gray blocks (160,160,170) which is never
+	// correct. Typically caused by typos in BMD texture references
+	// (e.g. hs_fiercelion01B vs hs_fiercelion_inB01).
+	for i := range meshes {
+		if remove[i] || i == maxTrisIdx {
+			continue
+		}
+		if texResolver.Resolve(meshes[i].TexPath) == nil {
+			remove[i] = true
+		}
+	}
+
 	if len(remove) == 0 {
 		return meshes
 	}
@@ -649,6 +682,38 @@ func compositeUnder(dst, bg *FrameBuffer) {
 // border via flood-fill. Interior dark pixels (surrounded by bright content)
 // are preserved. This creates clean background removal without destroying
 // dark details inside the rendered object (e.g. dark wing textures).
+// luminanceAlpha converts opaque-rendered pixels to luminance-based alpha.
+// Uses max channel with a floor threshold: pixels below the floor become
+// transparent, pixels above ramp up to full opacity. This cleanly separates
+// dark effect backgrounds (fire/energy on black) from actual glow content.
+func luminanceAlpha(fb *FrameBuffer, size int) {
+	const floor = 40  // dark bg threshold (rendered sRGB value)
+	const scale = 255.0 / (255.0 - floor)
+	n := size * size * 4
+	for i := 0; i < n; i += 4 {
+		if fb.Color[i+3] == 0 {
+			continue
+		}
+		r, g, b := int(fb.Color[i]), int(fb.Color[i+1]), int(fb.Color[i+2])
+		maxC := r
+		if g > maxC {
+			maxC = g
+		}
+		if b > maxC {
+			maxC = b
+		}
+		if maxC < floor {
+			fb.Color[i+3] = 0
+			continue
+		}
+		a := int(float64(maxC-floor) * scale)
+		if a > 255 {
+			a = 255
+		}
+		fb.Color[i+3] = uint8(a)
+	}
+}
+
 func removeBackgroundDark(fb *FrameBuffer, size int, threshold int) {
 	n := size * size
 	visited := make([]bool, n)

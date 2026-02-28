@@ -205,9 +205,9 @@ func RasterizeTriangleAdditive(
 		}
 	}
 
-	x0, y0 := px[idx[0]], py[idx[0]]
-	x1, y1 := px[idx[1]], py[idx[1]]
-	x2, y2 := px[idx[2]], py[idx[2]]
+	x0, y0, z0 := px[idx[0]], py[idx[0]], pz[idx[0]]
+	x1, y1, z1 := px[idx[1]], py[idx[1]], pz[idx[1]]
+	x2, y2, z2 := px[idx[2]], py[idx[2]], pz[idx[2]]
 
 	uvIdx := [3]int{ti[0], ti[1], ti[2]}
 	hasUV := tex != nil
@@ -313,7 +313,14 @@ func RasterizeTriangleAdditive(
 				continue
 			}
 
-			// No z-buffer check/write — additive blending
+			// Z-depth test (read only, no write).
+			// Skip pixels behind opaque geometry so additive effects
+			// only show in front of or on empty background (aura effect).
+			z := w0*z0 + w1*z1 + w2*z2
+			zbIdx := rowOff + sx
+			if z < fb.ZBuf[zbIdx] {
+				continue
+			}
 
 			lr := srgbToLinear[cr]
 			lg := srgbToLinear[cg]
@@ -331,13 +338,19 @@ func RasterizeTriangleAdditive(
 			fg := math.Pow(tg, invGamma) * 255
 			ffb := math.Pow(tb, invGamma) * 255
 
+			// Skip very dark texels — dark fire/energy background should not
+			// brighten existing pixels. Only bright glow/energy parts contribute.
+			lum := fr*0.299 + fg*0.587 + ffb*0.114
+			if lum < 80 {
+				continue
+			}
+
 			pxIdx := (rowOff + sx) * 4
 			// Additive: add to existing pixel, clamp to 255
 			fb.Color[pxIdx] = clamp255(float64(fb.Color[pxIdx]) + fr)
 			fb.Color[pxIdx+1] = clamp255(float64(fb.Color[pxIdx+1]) + fg)
 			fb.Color[pxIdx+2] = clamp255(float64(fb.Color[pxIdx+2]) + ffb)
 			// Alpha: use brightness of added color (dark pixels stay transparent)
-			lum := fr*0.299 + fg*0.587 + ffb*0.114
 			addAlpha := clamp255(lum)
 			if addAlpha > fb.Color[pxIdx+3] {
 				fb.Color[pxIdx+3] = addAlpha

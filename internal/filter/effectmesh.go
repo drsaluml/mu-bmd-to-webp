@@ -115,6 +115,12 @@ func FilterComponents(m *bmd.Mesh, minVerts int) bmd.Mesh {
 	if len(m.Verts) == 0 || len(m.Tris) == 0 {
 		return *m
 	}
+	// Very small meshes (e.g. billboard wings, simple quads) are unlikely
+	// to contain junk components — skip filtering to avoid removing
+	// symmetric pairs like bat wings (helper02.bmd: 2 quads, 8 verts).
+	if len(m.Verts) <= 2*minVerts {
+		return *m
+	}
 
 	// Build adjacency
 	adj := make(map[int][]int)

@@ -320,7 +320,17 @@
     "20_164":       "flat",
     "20_238":       "flat",
 
+    "13_3":  { "camera": "noflip", "rotX": -90, "rotY": 70, "bones": true, "standardize": false },
+    "13_5":  { "camera": "noflip", "rotX": -90, "rotY": 70, "bones": true, "standardize": false },
+    "13_6":  { "camera": "noflip", "rotX": -90, "rotY": 0, "bones": true, "standardize": false },
+    "13_11":  { "camera": "noflip", "rotX": -90, "rotY": 80, "bones": true, "standardize": false },
+    "13_12": { "camera": "noflip", "rotX": -10, "rotY": 30, "rotZ": 0, "bones": true, "standardize": false },
+    "13_13": { "camera": "noflip", "rotX": -10, "rotY": 30, "rotZ": 0, "bones": true, "standardize": false },
+"13_25-28": { "camera": "noflip", "rotX": -10, "rotY": 30, "rotZ": 0, "bones": true, "standardize": false },
+"13_54-58":  { "camera": "noflip", "rotX": -60, "rotY": 30, "bones": true, "standardize": false },
+
     "12_0":         { "rotX": 270, "rotY": -10, "bones": true, "standardize": false, "fill_ratio": 0.90, "additive_textures": ["elfin_wing"] },
+    "12_32-34" :  { "rotX": 285, "rotY": 0, "bones": true, "standardize": false},
     "12_48":         "scroll-12",
     "12_7-14":         "crystal-12",
     "12_16-19":         "crystal-12",
@@ -350,7 +360,10 @@
     "12_64": "seed-lightning",
     "12_65": "seed-earth",
 
-    "12_70-72":         "seed-12",
+    "12_70-73":         "seed-12",
+
+    "12_75": { "camera": "noflip", "rotX": -70, "rotY": 0, "bones": true, "standardize": false, "fill_ratio": 0.85, "tint": [0.20, 0.22, 0.85], "tint_textures": ["hs_fiercelion_inB02"] },
+    "12_76": { "camera": "noflip", "rotX": -70, "rotY": 0, "bones": true, "standardize": false, "fill_ratio": 0.85, "tint": [0.55, 0.48, 0.35] },
 
     "12_100": "seed-fire",    "12_101": "seed-water",    "12_102": "seed-ice",
     "12_103": "seed-wind",    "12_104": "seed-lightning", "12_105": "seed-earth",
