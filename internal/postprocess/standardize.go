@@ -372,6 +372,27 @@ func scaleAndCenter(img *image.NRGBA, canvasSize int, fillRatio float64) *image.
 	return canvas
 }
 
+// TrimToContent crops transparent borders and scales the content to fill the
+// canvas with only a small pixel padding. This is the final post-processing
+// step ensuring items use the full canvas area.
+func TrimToContent(img *image.NRGBA, size int, padding int) *image.NRGBA {
+	cropped := cropAlpha(img)
+	b := cropped.Bounds()
+	if b.Dx() == 0 || b.Dy() == 0 {
+		return img
+	}
+	// If content already fills most of the canvas, skip
+	maxDim := b.Dx()
+	if b.Dy() > maxDim {
+		maxDim = b.Dy()
+	}
+	if maxDim >= size-2*padding {
+		return img
+	}
+	fillRatio := float64(size-2*padding) / float64(size)
+	return scaleAndCenter(cropped, size, fillRatio)
+}
+
 // FlipHorizontal mirrors an image left-to-right.
 func FlipHorizontal(img *image.NRGBA) *image.NRGBA {
 	b := img.Bounds()

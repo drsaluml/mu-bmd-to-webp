@@ -173,6 +173,9 @@ func processItem(cfg Config, item itemlist.ItemDef) Result {
 		img = postprocess.FlipHorizontal(img)
 	}
 
+	// Final trim: crop transparent borders and scale to fill canvas
+	img = postprocess.TrimToContent(img, cfg.RenderSize, 4)
+
 	// Save as WebP
 	outPath := filepath.Join(cfg.OutputDir, fmt.Sprintf("%d", item.Section), fmt.Sprintf("%d.webp", item.Index))
 	if err := os.MkdirAll(filepath.Dir(outPath), 0755); err != nil {
