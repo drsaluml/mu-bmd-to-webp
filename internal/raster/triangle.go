@@ -7,6 +7,36 @@ import (
 	"mu-bmd-renderer/internal/mathutil"
 )
 
+// conservativeThresholds computes per-weight barycentric thresholds for thin triangles.
+// Standard rasterization misses sub-pixel thin triangles because no pixel center falls inside.
+// This relaxes the threshold for edges where the opposite vertex altitude < 1.5 pixels,
+// allowing thin geometry (rods, wires) to render at least 1-2 pixels wide.
+func conservativeThresholds(x0, y0, x1, y1, x2, y2, det float64) (float64, float64, float64) {
+	const defaultThresh = -0.001
+	const altThreshold = 1.5
+	t0, t1, t2 := defaultThresh, defaultThresh, defaultThresh
+	area2 := math.Abs(det)
+	e12sq := (x2-x1)*(x2-x1) + (y2-y1)*(y2-y1)
+	e20sq := (x0-x2)*(x0-x2) + (y0-y2)*(y0-y2)
+	e01sq := (x1-x0)*(x1-x0) + (y1-y0)*(y1-y0)
+	if e12sq > 1 {
+		if alt := area2 / math.Sqrt(e12sq); alt < altThreshold {
+			t0 = math.Max(-2.0, -1.0/alt)
+		}
+	}
+	if e20sq > 1 {
+		if alt := area2 / math.Sqrt(e20sq); alt < altThreshold {
+			t1 = math.Max(-2.0, -1.0/alt)
+		}
+	}
+	if e01sq > 1 {
+		if alt := area2 / math.Sqrt(e01sq); alt < altThreshold {
+			t2 = math.Max(-2.0, -1.0/alt)
+		}
+	}
+	return t0, t1, t2
+}
+
 // RasterizeTriangle rasterizes a single triangle with texture mapping, z-buffer,
 // sRGB color space, lighting, and ACES tone mapping.
 //
@@ -117,6 +147,9 @@ func RasterizeTriangle(
 	dy20 := y2 - y0
 	dx02 := x0 - x2
 
+	// Conservative rasterization for thin triangles
+	thresh0, thresh1, thresh2 := conservativeThresholds(x0, y0, x1, y1, x2, y2, det)
+
 	exposure := lc.Exposure
 	invGamma := lc.InvGamma
 
@@ -130,7 +163,7 @@ func RasterizeTriangle(
 			w1 := (dy20*dsx + dx02*dsy) * invDet
 			w2 := 1.0 - w0 - w1
 
-			if w0 < -0.001 || w1 < -0.001 || w2 < -0.001 {
+			if w0 < thresh0 || w1 < thresh1 || w2 < thresh2 {
 				continue
 			}
 
@@ -284,6 +317,8 @@ func RasterizeTriangleAdditive(
 	dy20 := y2 - y0
 	dx02 := x0 - x2
 
+	at0, at1, at2 := conservativeThresholds(x0, y0, x1, y1, x2, y2, det)
+
 	exposure := lc.Exposure
 	invGamma := lc.InvGamma
 
@@ -296,7 +331,7 @@ func RasterizeTriangleAdditive(
 			w1 := (dy20*dsx + dx02*dsy) * invDet
 			w2 := 1.0 - w0 - w1
 
-			if w0 < -0.001 || w1 < -0.001 || w2 < -0.001 {
+			if w0 < at0 || w1 < at1 || w2 < at2 {
 				continue
 			}
 
@@ -461,6 +496,8 @@ func RasterizeTriangleAdditiveOverlay(
 	dy20 := y2 - y0
 	dx02 := x0 - x2
 
+	bt0, bt1, bt2 := conservativeThresholds(x0, y0, x1, y1, x2, y2, det)
+
 	exposure := lc.Exposure
 	invGamma := lc.InvGamma
 
@@ -473,7 +510,7 @@ func RasterizeTriangleAdditiveOverlay(
 			w1 := (dy20*dsx + dx02*dsy) * invDet
 			w2 := 1.0 - w0 - w1
 
-			if w0 < -0.001 || w1 < -0.001 || w2 < -0.001 {
+			if w0 < bt0 || w1 < bt1 || w2 < bt2 {
 				continue
 			}
 
@@ -611,6 +648,8 @@ func RasterizeTriangleAlphaBlend(
 	if math.Abs(det) < 1e-10 { return }
 	invDet := 1.0 / det
 
+	ct0, ct1, ct2 := conservativeThresholds(x0, y0, x1, y1, x2, y2, det)
+
 	for sy := minY; sy <= maxY; sy++ {
 		dsy := float64(sy) - y2
 		rowOff := sy * size
@@ -620,7 +659,7 @@ func RasterizeTriangleAlphaBlend(
 			w1 := (dy20*dsx + dx02*dsy) * invDet
 			w2 := 1.0 - w0 - w1
 
-			if w0 < -0.001 || w1 < -0.001 || w2 < -0.001 {
+			if w0 < ct0 || w1 < ct1 || w2 < ct2 {
 				continue
 			}
 
