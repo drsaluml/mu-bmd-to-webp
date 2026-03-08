@@ -35,14 +35,26 @@ var effectPrefixPatterns = []string{"flame", "effect"}
 // when resolved (e.g. HQhair_R) they create unwanted body/hair overlays.
 var bodyTextureRE = regexp.MustCompile(`(?i)^(?:` +
 	`hqskin(?:2)?(?:_)?class\d+` + // HQSkinClass313, HQskin2Class314, HQskin_Class109
-	`|skinclass\d+head` + // Skinclass206head_N (face mesh); excludes Skinclass206_headhelmet (underscore before "head")
+	`|skinclass\d+(?:head(?:hair\d*)?)?_n` + // SkinClass106head_N (face), SkinClass106headhair_N (hair), SkinClass306headhair01_N
+	`|skinclass\d+$` + // skinClass301 (standalone body texture, no suffix)
 	`|nude_` + // nude_* body/skin underlays (nude_Item1161, nude_Armor, nude_class206_head, etc.)
 	`|item\d+_head` + // Item3002_Head (face), Item3002_headhair (hair) — character head in equipment BMDs
+	// NOTE: item\d+_pant/armor removed — in helmet BMDs these are equipment geometry, not body
 	`|skin_(?:barbarian|warrior|class)` + // skin_barbarian_01, skin_warrior_01, skin_Class107
 	`|level_man\d+` + // level_man01, level_man022, level_man033
 	`|(?:hq)?hair_r` + // hair glow overlay: hair_R (missing) and HQhair_R (resolved)
+	`|(?:hq)?hair_class\d+` + // hair_Class108, HQhair108 — character hair per class
+	`|(?:hq)?hair\d+` + // HQhair108, HQhair406, HQhair407 — HQ character hair
+	`|guard_hair` + // elf guard hair (HelmMale10.bmd)
 	`|cobraset_hair` + // wizard beard (HDK_HelmMale02.bmd)
 	`|tknight_hair` + // knight hair (HelmMale172/177_fighter.bmd)
+	`|tknighta$` + // knight body armor (HelmMale74.bmd)
+	`|sfbody` + // RageFighter body (HelmMale60.bmd) — SFarmor is the helmet, NOT body
+	`|richface` + // character face (CW_HelmMale02.bmd)
+	`|richfama` + // character body (CW_HelmMale02.bmd)
+	`|lowertest_r` + // lower body test (HelmMaleTest20.bmd)
+	// NOTE: blackdrager_head, darknight_head, cobraset_head_s are HELMET meshes, not body
+	// NOTE: head_*, boots\d+ are combined face+helmet textures in old BMDs
 	`)`)
 
 // IsBodyMesh returns true if this mesh is a character body/skin/hair mesh.
