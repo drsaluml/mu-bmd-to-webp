@@ -25,6 +25,19 @@ func RenderBMD(
 	supersample int,
 ) *image.NRGBA {
 	// Pre-filter effect meshes and body meshes on raw geometry (before bone transforms distort shapes)
+	// Always apply exclude_textures filter, even with keep_all_meshes.
+	if entry != nil && len(entry.ExcludeTextures) > 0 {
+		var kept []bmd.Mesh
+		for i := range meshes {
+			if !isExcludedTexture(meshes[i].TexPath, entry) {
+				kept = append(kept, meshes[i])
+			}
+		}
+		if len(kept) > 0 {
+			meshes = kept
+		}
+	}
+
 	keepAll := entry != nil && entry.KeepAllMeshes
 	if !keepAll {
 		var nonEffect []bmd.Mesh
@@ -33,9 +46,6 @@ func RenderBMD(
 				continue
 			}
 			if filter.IsBodyMesh(&meshes[i]) {
-				continue
-			}
-			if isExcludedTexture(meshes[i].TexPath, entry) {
 				continue
 			}
 			nonEffect = append(nonEffect, meshes[i])
@@ -114,6 +124,9 @@ func RenderBMD(
 	// Allocate framebuffer
 	fb := NewFrameBuffer(renderSize, renderSize)
 	lc := DefaultLightConfig()
+	if entry != nil && entry.AdditiveFloor > 0 {
+		lc.AdditiveDarkFloor = float64(entry.AdditiveFloor)
+	}
 
 	// Split meshes into opaque, alpha-blend, additive, and force-additive (unlit)
 	var opaqueMeshes, alphaBlendMeshes, additiveMeshes, forceAdditiveMeshes []bmd.Mesh
@@ -158,8 +171,51 @@ func RenderBMD(
 	}
 
 	// Pass 1: Opaque meshes (normal z-buffer rendering)
-	for _, mesh := range opaqueMeshes {
-		rasterizeMesh(fb, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendOpaque, posCamera)
+	// Meshes whose screen-space XY bounding box is fully contained within
+	// an earlier mesh's bbox are rendered as opaque overlays (no z-test) —
+	// they are surface decorations (shield ornaments, embossed details)
+	// designed to render through the body mesh in the game engine.
+	type meshBBox struct{ minX, minY, maxX, maxY float64 }
+	meshBounds := make([]meshBBox, len(opaqueMeshes))
+	for i, mesh := range opaqueMeshes {
+		bb := meshBBox{math.Inf(1), math.Inf(1), math.Inf(-1), math.Inf(-1)}
+		px, py, _ := viewmatrix.ProjectVertices(mesh.Verts, R, center, scale, renderSize, entry, posCamera)
+		for j := range px {
+			if px[j] < bb.minX { bb.minX = px[j] }
+			if px[j] > bb.maxX { bb.maxX = px[j] }
+			if py[j] < bb.minY { bb.minY = py[j] }
+			if py[j] > bb.maxY { bb.maxY = py[j] }
+		}
+		meshBounds[i] = bb
+	}
+
+	for i, mesh := range opaqueMeshes {
+		// Check if this mesh is contained within any earlier mesh's screen bbox.
+		// Only apply z-bias when the contained mesh is a TGA (surface decoration
+		// like gold frames, ornaments). A JPG contained in a TGA is the back
+		// filler mesh, not a decoration — it should NOT get z-bias priority.
+		contained := false
+		isTGA := strings.HasSuffix(strings.ToLower(mesh.TexPath), ".tga")
+		if i > 0 && isTGA {
+			b := meshBounds[i]
+			for j := 0; j < i; j++ {
+				p := meshBounds[j]
+				// Contained: inner bbox fully within outer bbox (with small margin)
+				margin := 2.0
+				if b.minX >= p.minX-margin && b.maxX <= p.maxX+margin &&
+					b.minY >= p.minY-margin && b.maxY <= p.maxY+margin {
+					contained = true
+					break
+				}
+			}
+		}
+		if contained {
+			// Surface decoration: render as opaque but skip z-test by using
+			// a large z-bias that guarantees it passes the depth test.
+			rasterizeMeshWithZBias(fb, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendOpaque, posCamera, 1e6)
+		} else {
+			rasterizeMesh(fb, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendOpaque, posCamera)
+		}
 	}
 
 	// Pass 2: Alpha-blend meshes (z-read but no z-write, alpha composite)
@@ -178,14 +234,28 @@ func RenderBMD(
 	// through transparent areas where the body doesn't cover.
 	if len(forceAdditiveMeshes) > 0 {
 		bgFB := NewFrameBuffer(renderSize, renderSize)
+		floor := 40
+		if entry != nil && entry.AdditiveFloor > 0 {
+			floor = entry.AdditiveFloor
+		}
+		// When additive_floor ≤ 1, render unlit (texture colors only, no lighting
+		// amplification) so dark gradient textures stay dark. Used for aura meshes.
+		bgBlend := blendOpaque
+		if floor <= 1 {
+			bgBlend = blendOpaqueUnlit
+		}
 		for _, mesh := range forceAdditiveMeshes {
-			rasterizeMesh(bgFB, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendOpaque, posCamera)
+			rasterizeMesh(bgFB, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, bgBlend, posCamera)
 		}
 		// Convert opaque-rendered pixels to luminance-based alpha.
 		// Dark pixels → low alpha (nearly transparent), bright pixels → high alpha.
 		// Then flood-fill from edges cleans up remaining semi-transparent border pixels.
-		luminanceAlpha(bgFB, renderSize)
-		removeBackgroundDark(bgFB, renderSize, 40)
+		// When additive_floor is very low (≤1), skip dark removal entirely — render
+		// the mesh and composite under as-is (for gradient aura meshes).
+		if floor > 1 {
+			luminanceAlphaWithFloor(bgFB, renderSize, floor)
+			removeBackgroundDark(bgFB, renderSize, floor)
+		}
 		compositeUnder(fb, bgFB)
 	}
 
@@ -219,9 +289,10 @@ func isBillboardJPEG(m *bmd.Mesh) bool {
 
 // Blend mode constants for rasterizeMesh.
 const (
-	blendOpaque   = 0
-	blendAlpha    = 1
-	blendAdditive = 2
+	blendOpaque      = 0
+	blendAlpha       = 1
+	blendAdditive    = 2
+	blendOpaqueUnlit = 3
 )
 
 // isAlphaOverlay returns true if this TGA-textured mesh should use alpha blending
@@ -252,12 +323,15 @@ func isAlphaOverlay(meshes []bmd.Mesh, idx int, texResolver texture.Resolver, en
 		if jpgV == 0 || jpgT == 0 {
 			continue
 		}
-		// Skip JPEG meshes that are force-additive — they're dark overlays, not body meshes
-		if isForceAdditive(meshes[i].TexPath, entry) {
+		// Skip JPEG meshes that are force-additive or _r additive — they're
+		// glow overlays, not body meshes that a TGA would overlay on.
+		if isForceAdditive(meshes[i].TexPath, entry) || isAdditiveTexture(meshes[i].TexPath) {
 			continue
 		}
-		// Skip JPEG meshes with tiny textures — those are glow fills, not body meshes
-		if texResolver != nil {
+		// Skip JPEG meshes with tiny textures — those are glow fills, not body meshes.
+		// But only skip if the mesh has few vertices (≤12); real body textures can
+		// be small (e.g. shield17.bmd WD_a.jpg 16×32 with 42 verts).
+		if texResolver != nil && jpgV <= 12 {
 			tex := texResolver.Resolve(meshes[i].TexPath)
 			if tex != nil {
 				b := tex.Bounds()
@@ -403,6 +477,26 @@ func hasAdditiveCounterpart(meshes []bmd.Mesh, idx int) bool {
 	return false
 }
 
+// rasterizeMeshWithZBias is like rasterizeMesh but adds a z-bias to push the mesh
+// forward in depth, making it win z-tests against other meshes at similar depths.
+// Used for TGA decorative overlays (gold shield frames) that should render on top
+// of JPG body meshes sharing the same geometry surface.
+func rasterizeMeshWithZBias(
+	fb *FrameBuffer, mesh *bmd.Mesh,
+	R mathutil.Mat3, center [3]float64, scale float64, renderSize int,
+	entry *trs.Entry, texResolver texture.Resolver, lc *LightConfig,
+	blendMode int, posCamera *viewmatrix.PosCamera, zBias float64,
+) {
+	if len(mesh.Verts) == 0 {
+		return
+	}
+	px, py, pz := viewmatrix.ProjectVertices(mesh.Verts, R, center, scale, renderSize, entry, posCamera)
+	for i := range pz {
+		pz[i] += zBias
+	}
+	rasterizeMeshInner(fb, mesh, px, py, pz, entry, texResolver, lc, blendMode)
+}
+
 func rasterizeMesh(
 	fb *FrameBuffer, mesh *bmd.Mesh,
 	R mathutil.Mat3, center [3]float64, scale float64, renderSize int,
@@ -412,9 +506,16 @@ func rasterizeMesh(
 	if len(mesh.Verts) == 0 {
 		return
 	}
-
 	px, py, pz := viewmatrix.ProjectVertices(mesh.Verts, R, center, scale, renderSize, entry, posCamera)
+	rasterizeMeshInner(fb, mesh, px, py, pz, entry, texResolver, lc, blendMode)
+}
 
+func rasterizeMeshInner(
+	fb *FrameBuffer, mesh *bmd.Mesh,
+	px, py, pz []float64,
+	entry *trs.Entry, texResolver texture.Resolver, lc *LightConfig,
+	blendMode int,
+) {
 	var tex *image.NRGBA
 	if texResolver != nil {
 		tex = texResolver.Resolve(mesh.TexPath)
@@ -434,6 +535,16 @@ func rasterizeMesh(
 
 	type rasterFunc func(*FrameBuffer, []float64, []float64, []float64, [][2]float32, [3]int, [3]int, *image.NRGBA, uint8, uint8, uint8, uint8, *LightConfig)
 	var rasterFn rasterFunc
+	// For unlit mode, override LightConfig to neutral (texture colors only).
+	if blendMode == blendOpaqueUnlit {
+		unlitLC := LightConfig{
+			Ambient:   1.0,
+			Exposure:  1.0,
+			SRGBGamma: lc.SRGBGamma,
+			InvGamma:  lc.InvGamma,
+		}
+		lc = &unlitLC
+	}
 	switch blendMode {
 	case blendAdditive:
 		rasterFn = RasterizeTriangleAdditive
@@ -647,6 +758,11 @@ func isTGAPairedGlowJPEG(meshes []bmd.Mesh, idx int, texResolver texture.Resolve
 	if !hasTGA {
 		return false
 	}
+	// Glow fills are flat planes with few vertices — real body textures
+	// have substantial geometry (e.g. shield11_a.jpg: 37v/52t)
+	if len(meshes[idx].Verts) > 12 {
+		return false
+	}
 	tex := texResolver.Resolve(meshes[idx].TexPath)
 	if tex == nil {
 		return false
@@ -691,8 +807,11 @@ func compositeUnder(dst, bg *FrameBuffer) {
 // transparent, pixels above ramp up to full opacity. This cleanly separates
 // dark effect backgrounds (fire/energy on black) from actual glow content.
 func luminanceAlpha(fb *FrameBuffer, size int) {
-	const floor = 40  // dark bg threshold (rendered sRGB value)
-	const scale = 255.0 / (255.0 - floor)
+	luminanceAlphaWithFloor(fb, size, 40)
+}
+
+func luminanceAlphaWithFloor(fb *FrameBuffer, size int, floor int) {
+	scale := 255.0 / (255.0 - float64(floor))
 	n := size * size * 4
 	for i := 0; i < n; i += 4 {
 		if fb.Color[i+3] == 0 {

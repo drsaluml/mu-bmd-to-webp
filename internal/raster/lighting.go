@@ -18,9 +18,10 @@ type LightConfig struct {
 	Rim       float64
 	SpecInt   float64
 	SpecPow   float64
-	Exposure  float64
-	SRGBGamma float64
-	InvGamma  float64
+	Exposure          float64
+	SRGBGamma         float64
+	InvGamma          float64
+	AdditiveDarkFloor float64 // minimum luminance for additive pass (default 80)
 }
 
 // DefaultLightConfig returns the standard lighting matching the Python renderer.
@@ -43,8 +44,9 @@ func DefaultLightConfig() LightConfig {
 		SpecInt:   0.45,
 		SpecPow:   12.0,
 		Exposure:  1.05,
-		SRGBGamma: 2.2,
-		InvGamma:  1.0 / 2.2,
+		SRGBGamma:         2.2,
+		InvGamma:          1.0 / 2.2,
+		AdditiveDarkFloor: 80,
 	}
 }
 

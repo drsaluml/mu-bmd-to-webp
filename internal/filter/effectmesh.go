@@ -11,7 +11,7 @@ import (
 var gradientEffectRE = regexp.MustCompile(`^(?:mini_|hangul)?gra(?:\d|_|$)`)
 
 var effectPatterns = []string{
-	"glow", "flare", "chrome", "effect",
+	"glow", "flare", "chrome",
 	"aura", "shiny", "spark", "fire", "blur",
 	"elec_light", "arrowlight", "lighting_mega", "pin_star",
 	"lightmarks", "light_blue", "light_red",
@@ -27,7 +27,7 @@ var effectPatterns = []string{
 // effectPrefixPatterns must match at the START of the texture stem only.
 // "flame" is prefix-only to avoid false positives like "requitalbox_flame_wood"
 // (metal frame of reward box, not a fire effect).
-var effectPrefixPatterns = []string{"flame"}
+var effectPrefixPatterns = []string{"flame", "effect"}
 
 // bodyTextureRE matches character body/skin/hair texture stems that are NOT part of
 // equipment geometry. These appear in helmet/armor BMDs as the character model

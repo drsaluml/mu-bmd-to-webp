@@ -82,6 +82,7 @@ type customTRSEntry struct {
 	BoneFlip         *bool             `json:"bone_flip"`
 	MirrorPair       *bool             `json:"mirror_pair"`
 	AdditiveTextures []string          `json:"additive_textures"`
+	AdditiveFloor    *int              `json:"additive_floor"`
 	ExcludeTextures  []string          `json:"exclude_textures"`
 	Tint             []float64         `json:"tint"`
 	TintTextures     []string          `json:"tint_textures"`
@@ -180,6 +181,9 @@ func makeEntry(c customTRSEntry) *Entry {
 	if len(c.AdditiveTextures) > 0 {
 		e.AdditiveTextures = c.AdditiveTextures
 	}
+	if c.AdditiveFloor != nil {
+		e.AdditiveFloor = *c.AdditiveFloor
+	}
 	if len(c.ExcludeTextures) > 0 {
 		e.ExcludeTextures = c.ExcludeTextures
 	}
@@ -248,6 +252,9 @@ func mergeEntryFields(existing *Entry, c customTRSEntry) {
 	}
 	if len(c.AdditiveTextures) > 0 {
 		existing.AdditiveTextures = c.AdditiveTextures
+	}
+	if c.AdditiveFloor != nil {
+		existing.AdditiveFloor = *c.AdditiveFloor
 	}
 	if len(c.ExcludeTextures) > 0 {
 		existing.ExcludeTextures = c.ExcludeTextures

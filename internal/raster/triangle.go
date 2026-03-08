@@ -316,9 +316,11 @@ func RasterizeTriangleAdditive(
 			// Z-depth test (read only, no write).
 			// Skip pixels behind opaque geometry so additive effects
 			// only show in front of or on empty background (aura effect).
+			// Small bias allows _r overlays sharing geometry with the base mesh
+			// to pass the test despite floating point imprecision.
 			z := w0*z0 + w1*z1 + w2*z2
 			zbIdx := rowOff + sx
-			if z < fb.ZBuf[zbIdx] {
+			if z < fb.ZBuf[zbIdx]-0.5 {
 				continue
 			}
 
@@ -341,7 +343,7 @@ func RasterizeTriangleAdditive(
 			// Skip very dark texels — dark fire/energy background should not
 			// brighten existing pixels. Only bright glow/energy parts contribute.
 			lum := fr*0.299 + fg*0.587 + ffb*0.114
-			if lum < 80 {
+			if lum < lc.AdditiveDarkFloor {
 				continue
 			}
 
