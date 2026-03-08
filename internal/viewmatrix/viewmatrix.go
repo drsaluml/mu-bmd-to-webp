@@ -2,12 +2,30 @@ package viewmatrix
 
 import (
 	"math"
+	"path/filepath"
+	"strings"
 
 	"mu-bmd-renderer/internal/bmd"
 	"mu-bmd-renderer/internal/filter"
 	"mu-bmd-renderer/internal/mathutil"
 	"mu-bmd-renderer/internal/trs"
 )
+
+// isForceAdditive checks if a mesh's texture is in the entry's additive_textures list.
+func isForceAdditive(texPath string, entry *trs.Entry) bool {
+	if entry == nil || len(entry.AdditiveTextures) == 0 {
+		return false
+	}
+	base := filepath.Base(strings.ReplaceAll(texPath, "\\", "/"))
+	stem := strings.TrimSuffix(base, filepath.Ext(base))
+	stemLower := strings.ToLower(stem)
+	for _, s := range entry.AdditiveTextures {
+		if strings.ToLower(s) == stemLower {
+			return true
+		}
+	}
+	return false
+}
 
 // TRSViewMatrix builds a 3×3 view matrix from a TRS entry.
 // Uses 3-tier hybrid routing based on rotY.
@@ -53,6 +71,13 @@ func IsFallbackPath(e *trs.Entry) bool {
 func ComputeViewMatrix(meshes []bmd.Mesh, entry *trs.Entry) (mathutil.Mat3, []bmd.Mesh) {
 	var bodyMeshes []bmd.Mesh
 	for i := range meshes {
+		// Skip FilterComponents for force-additive meshes — their duplicated
+		// geometry (e.g. energy beams) forms separate connected components that
+		// represent different beam directions after bone transforms.
+		if isForceAdditive(meshes[i].TexPath, entry) {
+			bodyMeshes = append(bodyMeshes, meshes[i])
+			continue
+		}
 		filtered := filter.FilterComponents(&meshes[i], 6)
 		bodyMeshes = append(bodyMeshes, filtered)
 	}

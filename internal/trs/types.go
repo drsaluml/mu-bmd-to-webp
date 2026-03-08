@@ -22,6 +22,7 @@ type Entry struct {
 	BoneFlip         bool              // prefix root bone matrices with Rx(-90°) to match BMD-viewer group inheritance
 	MirrorPair       bool              // duplicate + mirror to create a pair (e.g. single boot → pair)
 	AdditiveTextures []string          // force these texture stems to additive blending
+	AdditiveOnTop    bool              // route additive_textures to Pass 3 (on top) instead of Pass 4 (under-composite)
 	AdditiveFloor    int               // luminanceAlpha floor for force-additive pass (0 = default 40)
 	ExcludeTextures  []string          // exclude meshes with these texture stems from rendering
 	Tint             [3]float64        // RGB color multiplier (0=unused, e.g. [1,0.3,0.3]=red tint)

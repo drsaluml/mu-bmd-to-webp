@@ -128,12 +128,17 @@ func RenderBMD(
 		lc.AdditiveDarkFloor = float64(entry.AdditiveFloor)
 	}
 
-	// Split meshes into opaque, alpha-blend, additive, and force-additive (unlit)
-	var opaqueMeshes, alphaBlendMeshes, additiveMeshes, forceAdditiveMeshes []bmd.Mesh
+	// Split meshes into opaque, alpha-blend, additive, overlay-additive, and force-additive (unlit)
+	var opaqueMeshes, alphaBlendMeshes, additiveMeshes, overlayAdditiveMeshes, forceAdditiveMeshes []bmd.Mesh
 	for i, mesh := range bodyMeshes {
 		// Check per-item additive_textures override first
 		if isForceAdditive(mesh.TexPath, entry) {
-			forceAdditiveMeshes = append(forceAdditiveMeshes, mesh)
+			if entry != nil && entry.AdditiveOnTop {
+				// additive_on_top: additive only on existing geometry (no dark aura on background)
+				overlayAdditiveMeshes = append(overlayAdditiveMeshes, mesh)
+			} else {
+				forceAdditiveMeshes = append(forceAdditiveMeshes, mesh)
+			}
 			continue
 		}
 		// Effect meshes kept by keep_all_meshes → additive blending.
@@ -228,6 +233,23 @@ func RenderBMD(
 		rasterizeMesh(fb, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendAdditive, posCamera)
 	}
 
+	// Pass 3b: Overlay-additive meshes — rendered to a separate framebuffer,
+	// luminanceAlpha applied (dark → transparent), then composited OVER the main content.
+	// This shows bright energy/glow effects while hiding dark flat panels that would
+	// otherwise create a "black aura" on the background.
+	if len(overlayAdditiveMeshes) > 0 {
+		olFB := NewFrameBuffer(renderSize, renderSize)
+		for _, mesh := range overlayAdditiveMeshes {
+			rasterizeMesh(olFB, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendOpaque, posCamera)
+		}
+		olFloor := 40
+		if entry != nil && entry.AdditiveFloor > 0 {
+			olFloor = entry.AdditiveFloor
+		}
+		luminanceAlphaWithFloor(olFB, renderSize, olFloor)
+		compositeOver(fb, olFB)
+	}
+
 	// Pass 4: Force-additive meshes — rendered to a separate background
 	// framebuffer then composited UNDER the main content ("dst-over").
 	// The body mesh stays at full brightness; the overlay only shows
@@ -289,10 +311,11 @@ func isBillboardJPEG(m *bmd.Mesh) bool {
 
 // Blend mode constants for rasterizeMesh.
 const (
-	blendOpaque      = 0
-	blendAlpha       = 1
-	blendAdditive    = 2
-	blendOpaqueUnlit = 3
+	blendOpaque          = 0
+	blendAlpha           = 1
+	blendAdditive        = 2
+	blendOpaqueUnlit     = 3
+	blendAdditiveOverlay = 4 // additive but only on pixels with existing geometry (zbuf != -inf)
 )
 
 // isAlphaOverlay returns true if this TGA-textured mesh should use alpha blending
@@ -548,6 +571,8 @@ func rasterizeMeshInner(
 	switch blendMode {
 	case blendAdditive:
 		rasterFn = RasterizeTriangleAdditive
+	case blendAdditiveOverlay:
+		rasterFn = RasterizeTriangleAdditiveOverlay
 	case blendAlpha:
 		rasterFn = RasterizeTriangleAlphaBlend
 	default:
@@ -776,6 +801,29 @@ func isTGAPairedGlowJPEG(meshes []bmd.Mesh, idx int, texResolver texture.Resolve
 // compositeUnder composites bg UNDER dst ("dst-over" in Porter-Duff).
 // The background shows through transparent areas of the main buffer.
 // Where main is fully opaque, background is hidden.
+// compositeOver composites src ON TOP of dst using standard alpha-over blending.
+// src pixels with alpha > 0 blend over dst: dst = src*srcA + dst*(1 - srcA).
+func compositeOver(dst, src *FrameBuffer) {
+	for i := 0; i < len(dst.Color); i += 4 {
+		srcA := src.Color[i+3]
+		if srcA == 0 {
+			continue
+		}
+		sa := float64(srcA) / 255.0
+		invSA := 1.0 - sa
+		dstA := float64(dst.Color[i+3]) / 255.0
+
+		dst.Color[i] = clamp255(float64(src.Color[i])*sa + float64(dst.Color[i])*invSA)
+		dst.Color[i+1] = clamp255(float64(src.Color[i+1])*sa + float64(dst.Color[i+1])*invSA)
+		dst.Color[i+2] = clamp255(float64(src.Color[i+2])*sa + float64(dst.Color[i+2])*invSA)
+		newA := sa + dstA*invSA
+		if newA > 1.0 {
+			newA = 1.0
+		}
+		dst.Color[i+3] = uint8(newA*255.0 + 0.5)
+	}
+}
+
 func compositeUnder(dst, bg *FrameBuffer) {
 	for i := 0; i < len(dst.Color); i += 4 {
 		bgA := bg.Color[i+3]
