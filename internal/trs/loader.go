@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -87,6 +88,7 @@ type customTRSEntry struct {
 	ExcludeTextures  []string          `json:"exclude_textures"`
 	Tint             []float64         `json:"tint"`
 	TintTextures     []string          `json:"tint_textures"`
+	CropBottom       *float64          `json:"crop_bottom"`
 	Merge            *bool             `json:"merge"`
 }
 
@@ -197,6 +199,9 @@ func makeEntry(c customTRSEntry) *Entry {
 	if len(c.TintTextures) > 0 {
 		e.TintTextures = c.TintTextures
 	}
+	if c.CropBottom != nil {
+		e.CropBottom = *c.CropBottom
+	}
 	return e
 }
 
@@ -271,6 +276,9 @@ func mergeEntryFields(existing *Entry, c customTRSEntry) {
 	}
 	if len(c.TintTextures) > 0 {
 		existing.TintTextures = c.TintTextures
+	}
+	if c.CropBottom != nil {
+		existing.CropBottom = *c.CropBottom
 	}
 }
 
@@ -391,12 +399,26 @@ func mergeCustomTRS(data Data, jsonPath, xmlPath string) {
 
 	// Per-item overrides (always win)
 	// Keys support range syntax: "14_72-77" expands to 14_72, 14_73, ... 14_77
+	// Sort by range size descending so specific items override broader ranges.
+	type itemEntry struct {
+		keyStr string
+		raw    json.RawMessage
+		size   int
+	}
+	itemEntries := make([]itemEntry, 0, len(file.Items))
 	for keyStr, rawEntry := range file.Items {
 		keys := parseItemKeys(keyStr)
 		if keys == nil {
 			continue
 		}
-		c, err := resolveEntry(rawEntry, file.Presets)
+		itemEntries = append(itemEntries, itemEntry{keyStr, rawEntry, len(keys)})
+	}
+	sort.Slice(itemEntries, func(i, j int) bool {
+		return itemEntries[i].size > itemEntries[j].size
+	})
+	for _, ie := range itemEntries {
+		keys := parseItemKeys(ie.keyStr)
+		c, err := resolveEntry(ie.raw, file.Presets)
 		if err != nil {
 			continue
 		}

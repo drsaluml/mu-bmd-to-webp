@@ -133,6 +133,11 @@ func processItem(cfg Config, item itemlist.ItemDef) Result {
 		img = postprocess.Downsample(img, cfg.RenderSize)
 	}
 
+	// Crop bottom portion (e.g. to remove face from helmet renders)
+	if entry != nil && entry.CropBottom > 0 && entry.CropBottom < 1 {
+		postprocess.CropBottom(img, entry.CropBottom)
+	}
+
 	// Remove small clusters
 	img = postprocess.RemoveSmallClusters(img, 0.02)
 

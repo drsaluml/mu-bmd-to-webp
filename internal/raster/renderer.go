@@ -48,6 +48,9 @@ func RenderBMD(
 			if filter.IsBodyMesh(&meshes[i]) {
 				continue
 			}
+			if filter.IsJPGUnderTGA(meshes, i) {
+				continue
+			}
 			nonEffect = append(nonEffect, meshes[i])
 		}
 		if len(nonEffect) > 0 {
@@ -369,8 +372,62 @@ func isAlphaOverlay(meshes []bmd.Mesh, idx int, texResolver texture.Resolver, en
 			// body part. Different body parts (e.g. pants vs boots) may have
 			// similar vertex counts but occupy completely different spatial regions.
 			if meshBBoxOverlap(&meshes[idx], &meshes[i]) {
+				// Reject if TGA mesh span is much larger than JPG in any axis.
+				// A true overlay sits on the same surface (similar spans).
+				// A separate piece in front (e.g. helmet mask over face) has
+				// significantly larger span — it should render as opaque with
+				// alpha-test for proper z-buffer occlusion.
+				if meshSpanRatioExceeds(&meshes[idx], &meshes[i], 1.7) {
+					continue
+				}
 				return true
 			}
+		}
+	}
+	return false
+}
+
+// meshSpanRatioExceeds returns true if the first mesh's bounding box span
+// exceeds the second mesh's span by more than the given ratio in any axis.
+// Used to reject false-positive alpha overlays where the TGA mesh is a
+// separate 3D piece (e.g. helmet mask) rather than a same-surface decoration.
+func meshSpanRatioExceeds(a, b *bmd.Mesh, maxRatio float64) bool {
+	if len(a.Verts) == 0 || len(b.Verts) == 0 {
+		return false
+	}
+	var aMin, aMax, bMin, bMax [3]float32
+	aMin = a.Verts[0]
+	aMax = a.Verts[0]
+	for _, v := range a.Verts[1:] {
+		for k := 0; k < 3; k++ {
+			if v[k] < aMin[k] {
+				aMin[k] = v[k]
+			}
+			if v[k] > aMax[k] {
+				aMax[k] = v[k]
+			}
+		}
+	}
+	bMin = b.Verts[0]
+	bMax = b.Verts[0]
+	for _, v := range b.Verts[1:] {
+		for k := 0; k < 3; k++ {
+			if v[k] < bMin[k] {
+				bMin[k] = v[k]
+			}
+			if v[k] > bMax[k] {
+				bMax[k] = v[k]
+			}
+		}
+	}
+	for k := 0; k < 3; k++ {
+		spanA := float64(aMax[k] - aMin[k])
+		spanB := float64(bMax[k] - bMin[k])
+		if spanB < 0.001 {
+			continue // skip degenerate axis
+		}
+		if spanA/spanB > maxRatio {
+			return true
 		}
 	}
 	return false

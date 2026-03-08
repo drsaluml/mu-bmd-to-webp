@@ -37,6 +37,7 @@ var bodyTextureRE = regexp.MustCompile(`(?i)^(?:` +
 	`hqskin(?:2)?(?:_)?class\d+` + // HQSkinClass313, HQskin2Class314, HQskin_Class109
 	`|skinclass\d+(?:head(?:hair\d*)?)?_n` + // SkinClass106head_N (face), SkinClass106headhair_N (hair), SkinClass306headhair01_N
 	`|skinclass\d+$` + // skinClass301 (standalone body texture, no suffix)
+	// NOTE: skinclass\d+_headhelmet is the HELMET equipment (tiara/crown), NOT body
 	`|nude_` + // nude_* body/skin underlays (nude_Item1161, nude_Armor, nude_class206_head, etc.)
 	`|item\d+_head` + // Item3002_Head (face), Item3002_headhair (hair) — character head in equipment BMDs
 	// NOTE: item\d+_pant/armor removed — in helmet BMDs these are equipment geometry, not body
@@ -66,6 +67,95 @@ func IsBodyMesh(m *bmd.Mesh) bool {
 	tex := strings.ToLower(m.TexPath)
 	stem := strings.TrimSuffix(filepath.Base(strings.ReplaceAll(tex, "\\", "/")), filepath.Ext(tex))
 	return bodyTextureRE.MatchString(stem)
+}
+
+// IsJPGUnderTGA returns true if meshes[idx] is a JPG-textured mesh that has
+// a TGA counterpart with the same texture stem AND the TGA mesh extends
+// significantly beyond the JPG in at least one axis (span ratio > 1.5×).
+// This pattern occurs in helmet BMDs where TGA = equipment mask (extends forward)
+// and JPG = character head underneath. The TGA must also be substantial
+// (at least 50% of the JPG's vertex count) — tiny TGA accents (blade glows,
+// edge highlights) on large JPG bodies are not this pattern.
+func IsJPGUnderTGA(meshes []bmd.Mesh, idx int) bool {
+	tex := strings.ToLower(meshes[idx].TexPath)
+	ext := filepath.Ext(strings.ReplaceAll(tex, "\\", "/"))
+	if ext != ".jpg" && ext != ".jpeg" {
+		return false
+	}
+	stem := strings.TrimSuffix(filepath.Base(strings.ReplaceAll(tex, "\\", "/")), ext)
+	jpgV := len(meshes[idx].Verts)
+	if jpgV == 0 {
+		return false
+	}
+
+	for i := range meshes {
+		if i == idx {
+			continue
+		}
+		otherTex := strings.ToLower(meshes[i].TexPath)
+		otherExt := filepath.Ext(strings.ReplaceAll(otherTex, "\\", "/"))
+		if otherExt != ".tga" {
+			continue
+		}
+		otherStem := strings.TrimSuffix(filepath.Base(strings.ReplaceAll(otherTex, "\\", "/")), otherExt)
+		if otherStem != stem {
+			continue
+		}
+		// TGA must be substantial (not a tiny accent)
+		tgaV := len(meshes[i].Verts)
+		if tgaV == 0 || float64(tgaV)/float64(jpgV) < 0.5 {
+			continue
+		}
+		// TGA must extend significantly beyond the JPG in at least one axis.
+		// This indicates it's a separate 3D piece in front (e.g. helmet mask),
+		// not a surface decoration on the same geometry.
+		if spanExceeds(&meshes[i], &meshes[idx], 1.5) {
+			return true
+		}
+	}
+	return false
+}
+
+// spanExceeds returns true if mesh a's bounding box span exceeds mesh b's
+// span by more than the given ratio in at least one axis.
+func spanExceeds(a, b *bmd.Mesh, maxRatio float64) bool {
+	if len(a.Verts) == 0 || len(b.Verts) == 0 {
+		return false
+	}
+	var aMin, aMax, bMin, bMax [3]float32
+	aMin, aMax = a.Verts[0], a.Verts[0]
+	for _, v := range a.Verts[1:] {
+		for k := 0; k < 3; k++ {
+			if v[k] < aMin[k] {
+				aMin[k] = v[k]
+			}
+			if v[k] > aMax[k] {
+				aMax[k] = v[k]
+			}
+		}
+	}
+	bMin, bMax = b.Verts[0], b.Verts[0]
+	for _, v := range b.Verts[1:] {
+		for k := 0; k < 3; k++ {
+			if v[k] < bMin[k] {
+				bMin[k] = v[k]
+			}
+			if v[k] > bMax[k] {
+				bMax[k] = v[k]
+			}
+		}
+	}
+	for k := 0; k < 3; k++ {
+		spanA := float64(aMax[k] - aMin[k])
+		spanB := float64(bMax[k] - bMin[k])
+		if spanB < 0.001 {
+			continue
+		}
+		if spanA/spanB > maxRatio {
+			return true
+		}
+	}
+	return false
 }
 
 // IsEffectMesh returns true if this mesh is an aura/glow/effect overlay.

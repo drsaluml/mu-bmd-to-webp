@@ -27,6 +27,7 @@ type Entry struct {
 	ExcludeTextures  []string          // exclude meshes with these texture stems from rendering
 	Tint             [3]float64        // RGB color multiplier (0=unused, e.g. [1,0.3,0.3]=red tint)
 	TintTextures     []string          // apply tint only to these texture stems (empty = all meshes)
+	CropBottom       float64           // crop bottom fraction of rendered image (0=none, 0.5=remove bottom half)
 }
 
 // Data maps (section, index) to an Entry.
