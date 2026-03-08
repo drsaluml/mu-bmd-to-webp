@@ -251,6 +251,7 @@
     "5_163": "book-5",
     "5_164": "orb",
     "5_168": "orb",
+    "6_3": { "camera": "noflip", "rotX": -90, "rotY": -59, "rotZ": 0, "bones": true, "display_angle": -90, "additive_textures": ["shield07"], "additive_floor": 15 },
     "6_11-12": { "rotX": -107, "rotY": -59, "rotZ": -64, "scale": 0.0025, "bones": true, "display_angle": -90, "camera": "noflip" },
     "6_13": { "rotX": -45, "rotY": -40, "rotZ": -80, "scale": 0.0025, "bones": true, "display_angle": -90, "camera": "noflip" },
     "6_14": { "rotX": -107, "rotY": -59, "rotZ": -64, "scale": 0.0025, "bones": true, "display_angle": -90, "flip": true, "camera": "noflip" },
