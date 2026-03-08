@@ -88,7 +88,6 @@ type customTRSEntry struct {
 	ExcludeTextures  []string          `json:"exclude_textures"`
 	Tint             []float64         `json:"tint"`
 	TintTextures     []string          `json:"tint_textures"`
-	CropBottom       *float64          `json:"crop_bottom"`
 	Merge            *bool             `json:"merge"`
 }
 
@@ -199,9 +198,6 @@ func makeEntry(c customTRSEntry) *Entry {
 	if len(c.TintTextures) > 0 {
 		e.TintTextures = c.TintTextures
 	}
-	if c.CropBottom != nil {
-		e.CropBottom = *c.CropBottom
-	}
 	return e
 }
 
@@ -276,9 +272,6 @@ func mergeEntryFields(existing *Entry, c customTRSEntry) {
 	}
 	if len(c.TintTextures) > 0 {
 		existing.TintTextures = c.TintTextures
-	}
-	if c.CropBottom != nil {
-		existing.CropBottom = *c.CropBottom
 	}
 }
 
