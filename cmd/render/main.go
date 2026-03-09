@@ -90,8 +90,9 @@ func main() {
 	}
 	fmt.Printf("TRS data: %d items loaded\n", len(trsData))
 
-	// Build texture index
-	texIndex := texture.BuildIndex(cfg.ItemDir)
+	// Build texture index (also scan Data/Skill for textures used by some items)
+	skillDir := filepath.Join(filepath.Dir(cfg.ItemDir), "Skill")
+	texIndex := texture.BuildIndex(cfg.ItemDir, skillDir)
 	texCache := texture.NewCache(texIndex)
 	fmt.Printf("Textures: %d indexed\n", texIndex.Len())
 

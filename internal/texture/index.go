@@ -20,7 +20,8 @@ type Index struct {
 }
 
 // BuildIndex scans itemDir/texture/ and subdirectories for OZJ/OZT files.
-func BuildIndex(itemDir string) *Index {
+// extraDirs are additional directories to scan for textures (e.g., Data/Skill).
+func BuildIndex(itemDir string, extraDirs ...string) *Index {
 	idx := &Index{entries: make(map[string]*texEntry)}
 
 	// Scan main texture dir and all subdirectory texture dirs
@@ -40,6 +41,13 @@ func BuildIndex(itemDir string) *Index {
 					searchDirs = append(searchDirs, subTexLower)
 				}
 			}
+		}
+	}
+
+	// Add extra directories (e.g., Data/Skill)
+	for _, d := range extraDirs {
+		if info, err := os.Stat(d); err == nil && info.IsDir() {
+			searchDirs = append(searchDirs, d)
 		}
 	}
 

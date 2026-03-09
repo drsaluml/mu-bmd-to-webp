@@ -154,7 +154,7 @@ func RenderBMD(
 		// a single-mesh model can't be an "overlay" on nothing.
 		// Also skip billboard classification if this mesh has a _R additive
 		// counterpart with the same geometry — it's the base layer, not glow.
-		billboard := len(bodyMeshes) > 1 && isBillboardJPEG(&mesh) && !hasAdditiveCounterpart(bodyMeshes, i)
+		billboard := len(bodyMeshes) > 1 && isBillboardJPEG(&mesh) && !hasAdditiveCounterpart(bodyMeshes, i) && !isContainedOverlay(bodyMeshes, i)
 		if isAdditiveTexture(mesh.TexPath) || billboard || isDuplicateGeometryOverlay(bodyMeshes, i) {
 			additiveMeshes = append(additiveMeshes, mesh)
 		} else if isTGAPairedGlowJPEG(bodyMeshes, i, texResolver) {
@@ -551,6 +551,58 @@ func hasAdditiveCounterpart(meshes []bmd.Mesh, idx int) bool {
 		}
 		if isAdditiveTexture(meshes[j].TexPath) &&
 			len(meshes[j].Verts) == nv && len(meshes[j].Tris) == nt {
+			return true
+		}
+	}
+	return false
+}
+
+// isContainedOverlay returns true if meshes[idx] is a small mesh whose bounding box
+// is largely contained within a larger mesh's bounding box. Such meshes are surface
+// overlays (e.g. earring card face panels) rather than floating billboards.
+func isContainedOverlay(meshes []bmd.Mesh, idx int) bool {
+	m := &meshes[idx]
+	if len(m.Verts) == 0 {
+		return false
+	}
+	// Compute bbox of candidate
+	var cMin, cMax [3]float32
+	cMin, cMax = m.Verts[0], m.Verts[0]
+	for _, v := range m.Verts[1:] {
+		for k := 0; k < 3; k++ {
+			if v[k] < cMin[k] {
+				cMin[k] = v[k]
+			}
+			if v[k] > cMax[k] {
+				cMax[k] = v[k]
+			}
+		}
+	}
+	// Check against each larger mesh
+	for j := range meshes {
+		if j == idx || len(meshes[j].Verts) <= len(m.Verts) {
+			continue
+		}
+		var oMin, oMax [3]float32
+		oMin, oMax = meshes[j].Verts[0], meshes[j].Verts[0]
+		for _, v := range meshes[j].Verts[1:] {
+			for k := 0; k < 3; k++ {
+				if v[k] < oMin[k] {
+					oMin[k] = v[k]
+				}
+				if v[k] > oMax[k] {
+					oMax[k] = v[k]
+				}
+			}
+		}
+		// Check if candidate is contained in at least 2 of 3 axes
+		contained := 0
+		for k := 0; k < 3; k++ {
+			if cMin[k] >= oMin[k]-1 && cMax[k] <= oMax[k]+1 {
+				contained++
+			}
+		}
+		if contained >= 2 {
 			return true
 		}
 	}

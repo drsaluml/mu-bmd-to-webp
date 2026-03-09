@@ -169,7 +169,7 @@ func RasterizeTriangle(
 
 			z := w0*z0 + w1*z1 + w2*z2
 			zIdx := rowOff + sx
-			if z <= fb.ZBuf[zIdx] {
+			if z < fb.ZBuf[zIdx] {
 				continue
 			}
 
