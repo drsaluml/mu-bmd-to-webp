@@ -624,7 +624,7 @@
     "14_100": { "rotX": 0, "rotY": 10, "rotZ": 0, "camera": "noflip", "standardize": false },
     "14_103-108": { "rotX": -45, "rotY": 20, "camera": "noflip", "standardize": false },
     "14_109": { "rotX": -45, "rotY": 20, "camera": "noflip", "standardize": false },
-    "14_110": { "rotX": 110, "rotY": 0, "rotZ": 0, "camera": "noflip", "standardize": false },
+    "14_110": { "camera": "noflip", "rotX": 110, "rotY": 0, "bones": true, "standardize": false, "additive_textures": ["indicationB_R"], "additive_on_top": true, "additive_floor": 10 },
     "14_111-113": "potion",
     "14_133": "potion",
     "14_140": "scroll",
