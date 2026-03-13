@@ -8,9 +8,9 @@ import (
 
 // Downsample reduces image size with premultiplied-alpha-aware Lanczos filtering.
 // This prevents dark halo artifacts at transparent edges.
-func Downsample(img *image.NRGBA, targetSize int) *image.NRGBA {
+func Downsample(img *image.NRGBA, targetW, targetH int) *image.NRGBA {
 	b := img.Bounds()
-	if b.Dx() <= targetSize && b.Dy() <= targetSize {
+	if b.Dx() <= targetW && b.Dy() <= targetH {
 		return img
 	}
 
@@ -29,13 +29,13 @@ func Downsample(img *image.NRGBA, targetSize int) *image.NRGBA {
 	}
 
 	// Downsample with CatmullRom (approximates Lanczos)
-	dst := image.NewRGBA(image.Rect(0, 0, targetSize, targetSize))
+	dst := image.NewRGBA(image.Rect(0, 0, targetW, targetH))
 	draw.CatmullRom.Scale(dst, dst.Bounds(), premul, premul.Bounds(), draw.Src, nil)
 
 	// Unpremultiply alpha
 	result := image.NewNRGBA(dst.Bounds())
-	for y := 0; y < targetSize; y++ {
-		for x := 0; x < targetSize; x++ {
+	for y := 0; y < targetH; y++ {
+		for x := 0; x < targetW; x++ {
 			si := dst.PixOffset(x, y)
 			di := result.PixOffset(x, y)
 			a := float64(dst.Pix[si+3])

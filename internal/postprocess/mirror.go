@@ -12,7 +12,7 @@ import (
 // side by side to create a pair (e.g. single boot → pair of boots).
 // Works with both bones=false (single item) and bones=true (picks one from pair).
 // The result is centered on a canvas of the given size.
-func MirrorPair(img *image.NRGBA, size int, fillRatio float64) *image.NRGBA {
+func MirrorPair(img *image.NRGBA, canvasW, canvasH int, fillRatio float64) *image.NRGBA {
 	// Isolate the largest connected component (picks one boot from walking pair)
 	img = keepLargestComponent(img)
 
@@ -32,10 +32,10 @@ func MirrorPair(img *image.NRGBA, size int, fillRatio float64) *image.NRGBA {
 		}
 	}
 
-	// Gap between the two items (proportional to item width)
-	gap := cw / 8
-	if gap < 2 {
-		gap = 2
+	// Minimal gap between the two items (just enough to not overlap)
+	gap := cw / 25
+	if gap < 1 {
+		gap = 1
 	}
 
 	// Compose: original on left, mirror on right
@@ -48,14 +48,14 @@ func MirrorPair(img *image.NRGBA, size int, fillRatio float64) *image.NRGBA {
 	draw.Copy(pair, image.Pt(cw+gap, 0), mirrored, mirrored.Bounds(), draw.Over, nil)
 
 	// Scale and center onto final canvas
-	canvas := image.NewNRGBA(image.Rect(0, 0, size, size))
+	canvas := image.NewNRGBA(image.Rect(0, 0, canvasW, canvasH))
 	for i := range canvas.Pix {
 		canvas.Pix[i] = 0
 	}
 
 	// Fit the pair into canvas with fillRatio
-	scaleX := float64(size) * fillRatio / float64(pairW)
-	scaleY := float64(size) * fillRatio / float64(pairH)
+	scaleX := float64(canvasW) * fillRatio / float64(pairW)
+	scaleY := float64(canvasH) * fillRatio / float64(pairH)
 	sc := scaleX
 	if scaleY < sc {
 		sc = scaleY
@@ -70,8 +70,8 @@ func MirrorPair(img *image.NRGBA, size int, fillRatio float64) *image.NRGBA {
 		dstH = 1
 	}
 
-	offX := (size - dstW) / 2
-	offY := (size - dstH) / 2
+	offX := (canvasW - dstW) / 2
+	offY := (canvasH - dstH) / 2
 
 	dstRect := image.Rect(offX, offY, offX+dstW, offY+dstH)
 	draw.CatmullRom.Scale(canvas, dstRect, pair, pair.Bounds(), draw.Over, &draw.Options{

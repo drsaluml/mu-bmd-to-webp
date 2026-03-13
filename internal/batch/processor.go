@@ -24,7 +24,8 @@ type Config struct {
 	OutputDir   string
 	TexResolver texture.Resolver
 	TRSData     trs.Data
-	RenderSize  int
+	RenderWidth  int
+	RenderHeight int
 	WebPQuality int
 	Supersample int
 	Workers     int
@@ -126,11 +127,20 @@ func processItem(cfg Config, item itemlist.ItemDef) Result {
 
 	entry := cfg.TRSData[[2]int{item.Section, item.Index}]
 
-	img := raster.RenderBMD(meshes, bones, entry, cfg.TexResolver, cfg.RenderSize, cfg.Supersample)
+	// Per-item render dimensions override global config
+	renderW, renderH := cfg.RenderWidth, cfg.RenderHeight
+	if entry != nil && entry.RenderWidth > 0 {
+		renderW = entry.RenderWidth
+	}
+	if entry != nil && entry.RenderHeight > 0 {
+		renderH = entry.RenderHeight
+	}
+
+	img := raster.RenderBMD(meshes, bones, entry, cfg.TexResolver, renderW, renderH, cfg.Supersample)
 
 	// Post-processing: supersample downsample
 	if cfg.Supersample > 1 {
-		img = postprocess.Downsample(img, cfg.RenderSize)
+		img = postprocess.Downsample(img, renderW, renderH)
 	}
 
 	// Remove small clusters
@@ -150,13 +160,13 @@ func processItem(cfg Config, item itemlist.ItemDef) Result {
 			fillRatio = entry.FillRatio
 			forceFlip = entry.Flip
 		}
-		img = postprocess.StandardizeImage(img, cfg.RenderSize, displayAngle, fillRatio, forceFlip)
+		img = postprocess.StandardizeImage(img, renderW, renderH, displayAngle, fillRatio, forceFlip)
 	} else {
 		fillRatio := trs.DefaultFillRatio
 		if entry != nil {
 			fillRatio = entry.FillRatio
 		}
-		img = postprocess.CropAndCenter(img, cfg.RenderSize, fillRatio)
+		img = postprocess.CropAndCenter(img, renderW, renderH, fillRatio)
 	}
 
 	// Mirror pair: duplicate + mirror to create a pair (e.g. single boot → pair)
@@ -165,7 +175,7 @@ func processItem(cfg Config, item itemlist.ItemDef) Result {
 		if entry.FillRatio > 0 {
 			fillRatio = entry.FillRatio
 		}
-		img = postprocess.MirrorPair(img, cfg.RenderSize, fillRatio)
+		img = postprocess.MirrorPair(img, renderW, renderH, fillRatio)
 	}
 
 	// Horizontal canvas flip
@@ -174,7 +184,7 @@ func processItem(cfg Config, item itemlist.ItemDef) Result {
 	}
 
 	// Final trim: crop transparent borders and scale to fill canvas
-	img = postprocess.TrimToContent(img, cfg.RenderSize, 4)
+	img = postprocess.TrimToContent(img, renderW, renderH, 4)
 
 	// Save as WebP
 	outPath := filepath.Join(cfg.OutputDir, fmt.Sprintf("%d", item.Section), fmt.Sprintf("%d.webp", item.Index))
@@ -214,4 +224,3 @@ func processItem(cfg Config, item itemlist.ItemDef) Result {
 		Success: true,
 	}
 }
-

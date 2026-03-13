@@ -133,7 +133,7 @@ type PosCamera struct {
 
 // SetupPosCamera computes positioned camera parameters from the bounding box of all meshes.
 // camHeight is a fraction of model Y-span (e.g. 0.3 = camera 30% of model height above center).
-func SetupPosCamera(bodyMeshes []bmd.Mesh, R mathutil.Mat3, entry *trs.Entry, renderSize, margin int) *PosCamera {
+func SetupPosCamera(bodyMeshes []bmd.Mesh, R mathutil.Mat3, entry *trs.Entry, renderW, renderH, margin int) *PosCamera {
 	// Compute 3D bounds of all rotated vertices
 	var allMin, allMax [3]float64
 	allMin = [3]float64{math.Inf(1), math.Inf(1), math.Inf(1)}
@@ -212,11 +212,11 @@ func SetupPosCamera(bodyMeshes []bmd.Mesh, R mathutil.Mat3, entry *trs.Entry, re
 	pc.ProjCenterX = (projMinX + projMaxX) / 2
 	pc.ProjCenterY = (projMinY + projMaxY) / 2
 
-	projSpan := math.Max(projMaxX-projMinX, projMaxY-projMinY)
-	if projSpan < 0.001 {
-		projSpan = 0.001
-	}
-	pc.ProjScale = float64(renderSize-2*margin) / projSpan
+	projSpanX := projMaxX - projMinX
+	projSpanY := projMaxY - projMinY
+	scaleX := float64(renderW-2*margin) / math.Max(projSpanX, 0.001)
+	scaleY := float64(renderH-2*margin) / math.Max(projSpanY, 0.001)
+	pc.ProjScale = math.Min(scaleX, scaleY)
 
 	return pc
 }
@@ -254,13 +254,14 @@ func (pc *PosCamera) project(tv mathutil.Vec3) (float64, float64) {
 // ProjectVertices transforms 3D vertices to 2D screen coordinates.
 // Returns px, py, pz slices (screen X, screen Y, depth).
 // When posCamera is non-nil, uses positioned camera perspective instead of the standard projection.
-func ProjectVertices(verts [][3]float32, R mathutil.Mat3, center [3]float64, scale float64, renderSize int, entry *trs.Entry, posCamera *PosCamera) ([]float64, []float64, []float64) {
+func ProjectVertices(verts [][3]float32, R mathutil.Mat3, center [3]float64, scale float64, renderW, renderH int, entry *trs.Entry, posCamera *PosCamera) ([]float64, []float64, []float64) {
 	n := len(verts)
 	px := make([]float64, n)
 	py := make([]float64, n)
 	pz := make([]float64, n)
 
-	half := float64(renderSize) / 2
+	halfW := float64(renderW) / 2
+	halfH := float64(renderH) / 2
 
 	// Positioned camera path: full parallax perspective from an elevated camera
 	if posCamera != nil {
@@ -269,8 +270,8 @@ func ProjectVertices(verts [][3]float32, R mathutil.Mat3, center [3]float64, sca
 			tv := R.MulVec3(v)
 
 			sx, sy := posCamera.project(tv)
-			px[i] = (sx-posCamera.ProjCenterX)*posCamera.ProjScale + half
-			py[i] = (sy-posCamera.ProjCenterY)*posCamera.ProjScale + half
+			px[i] = (sx-posCamera.ProjCenterX)*posCamera.ProjScale + halfW
+			py[i] = (sy-posCamera.ProjCenterY)*posCamera.ProjScale + halfH
 			pz[i] = tv[2]
 		}
 		return px, py, pz
@@ -325,8 +326,8 @@ func ProjectVertices(verts [][3]float32, R mathutil.Mat3, center [3]float64, sca
 			t[1] *= factor
 		}
 
-		px[i] = (t[0]-center[0])*scale + half
-		py[i] = -(t[1]-center[1])*scale + half
+		px[i] = (t[0]-center[0])*scale + halfW
+		py[i] = -(t[1]-center[1])*scale + halfH
 		pz[i] = t[2]
 	}
 

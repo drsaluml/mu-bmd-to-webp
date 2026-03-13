@@ -1,7 +1,7 @@
 # MU Online BMD 3D Renderer
 
 โปรแกรม CLI สำหรับแปลงไฟล์โมเดล 3D BMD (Binary Model Data) จากเกม MU Online
-ให้เป็นภาพ WebP ขนาด 256x256 พิกเซล พร้อมพื้นหลังโปร่งใส สำหรับใช้แสดงผลบนเว็บ
+ให้เป็นภาพ WebP พร้อมพื้นหลังโปร่งใส สำหรับใช้แสดงผลบนเว็บ (ค่าเริ่มต้น 256x256 รองรับขนาดสี่เหลี่ยมผืนผ้า)
 
 เขียนด้วย Go (Pure Go, ไม่ใช้ CGo) รองรับ cross-compilation
 
@@ -45,32 +45,34 @@ make build
 
 ## การใช้งาน
 
-### เรนเดอร์ทั้งหมด
+### ใช้ `go run` (ไม่ต้อง build ก่อน)
 
 ```bash
-./mu-bmd-renderer
+cd mu-bmd-renderer
+
+# เรนเดอร์ทั้งหมด (~22 วินาที, goroutine workers)
+go run ./cmd/render -config config.json
+
+# เรนเดอร์เพื่อทดสอบ (N ไอเทมแรก)
+go run ./cmd/render -config config.json -test 20
+
+# เรนเดอร์เฉพาะ section
+go run ./cmd/render -config config.json -section 0
+
+# เรนเดอร์เฉพาะไอเทม (section 0, index 3 = Katana)
+go run ./cmd/render -config config.json -section 0 -index 3
+
+# กำหนดจำนวน worker
+go run ./cmd/render -config config.json -workers 8
 ```
 
-### เรนเดอร์เพื่อทดสอบ (N ไอเทมแรก)
+### ใช้ binary (build ก่อน)
 
 ```bash
-./mu-bmd-renderer -test 20
-```
-
-### เรนเดอร์เฉพาะ section
-
-```bash
-# ทุกไอเทมใน section 0 (Swords)
-./mu-bmd-renderer -section 0
-
-# เฉพาะ Katana (section 0, index 3)
-./mu-bmd-renderer -section 0 -index 3
-```
-
-### ใช้ไฟล์ config
-
-```bash
+make build
 ./mu-bmd-renderer -config config.json
+./mu-bmd-renderer -test 20
+./mu-bmd-renderer -section 0 -index 3
 ```
 
 ### ถอดรหัส item.bmd เป็น ItemList.xml
@@ -118,6 +120,8 @@ go run ./cmd/decodeitem path/to/item.bmd path/to/output.xml
   "custom_trs_json": "custom_trs.json",
   "output_dir": "Data/Item-renders",
   "render_size": 256,
+  "render_width": 0,
+  "render_height": 0,
   "supersample": 2,
   "webp_quality": 90,
   "workers": 0
@@ -132,8 +136,10 @@ go run ./cmd/decodeitem path/to/item.bmd path/to/output.xml
 | `trs_bmd` | path ไปยัง itemtrsdata.bmd (ข้อมูลมุมหมุน/สเกล) |
 | `custom_trs_json` | path ไปยัง custom_trs.json (ปรับแต่งมุมเพิ่มเติม) |
 | `output_dir` | โฟลเดอร์สำหรับเก็บภาพ output |
-| `render_size` | ขนาดภาพ output (พิกเซล) |
-| `supersample` | ตัวคูณ supersampling (2 = เรนเดอร์ 512 แล้วย่อเหลือ 256) |
+| `render_size` | ขนาดภาพ output แบบจตุรัส (ตั้งทั้ง width และ height พร้อมกัน) |
+| `render_width` | ความกว้างภาพ output (พิกเซล, 0 = ใช้ค่าจาก `render_size`) |
+| `render_height` | ความสูงภาพ output (พิกเซล, 0 = ใช้ค่าจาก `render_size`) |
+| `supersample` | ตัวคูณ supersampling (2 = เรนเดอร์ 2 เท่าแล้วย่อลง) |
 | `webp_quality` | คุณภาพ WebP (1-100) |
 | `workers` | จำนวน worker (0 = ใช้ทุก CPU) |
 
@@ -259,9 +265,14 @@ Data/Item-renders/
 | `keep_all_meshes` | bool | ข้ามการกรอง effect mesh |
 | `mirror_pair` | bool | เรนเดอร์ข้างเดียวแล้ว duplicate+mirror สร้างคู่ |
 | `additive_textures` | string[] | บังคับ texture stems เหล่านี้เป็น additive under-composite |
+| `additive_on_top` | bool | ใช้ additive on top (Pass 3b) แทน under-composite (Pass 4) สำหรับ additive_textures |
+| `additive_floor` | int | ค่า floor สำหรับ luminanceAlpha ใน force-additive pass (ค่าเริ่มต้น: 40) |
 | `exclude_textures` | string[] | ไม่เรนเดอร์ mesh ที่มี texture stems เหล่านี้ |
+| `bone_flip` | bool | เติม Rx(-90°) ที่ root bone matrix (สำหรับ model ที่ bone hierarchy หมุนต่างจากปกติ) |
 | `tint` | [R,G,B] | ตัวคูณสี RGB (เช่น `[1, 0.3, 0.3]` = โทนแดง) |
 | `tint_textures` | string[] | ใช้ tint เฉพาะ texture stems ที่ตรงกัน |
+| `render_width` | int | ขนาดกว้างภาพ output เฉพาะ item (0 = ใช้ค่าจาก config.json) |
+| `render_height` | int | ขนาดสูงภาพ output เฉพาะ item (0 = ใช้ค่าจาก config.json) |
 
 key ของ items ใช้รูปแบบ `{section}_{index}` เช่น `"1_4"` = section 1, index 4
 
@@ -312,9 +323,9 @@ make deps         # go mod download
 
 | | Python | Go |
 |---|---|---|
-| เวลาทั้งหมด (4800 items) | ~47 นาที | ~22 วินาที |
+| เวลาทั้งหมด (4812 items) | ~47 นาที | ~22 วินาที |
 | ความเร็ว | ~1.7 items/sec | ~220 items/sec |
-| อัตราสำเร็จ | 98.1% | 99.4% |
+| อัตราสำเร็จ | 98.1% | 99.5% |
 | การประมวลผล | ลำดับเดียว | ขนาน (goroutine pool) |
 
 เร็วกว่า Python ประมาณ **130 เท่า**

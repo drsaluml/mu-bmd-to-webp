@@ -19,10 +19,12 @@ type Config struct {
 	OutputDir   string `json:"output_dir"`
 
 	// Render settings
-	RenderSize  int `json:"render_size"`
-	Supersample int `json:"supersample"`
-	WebPQuality int `json:"webp_quality"`
-	Workers     int `json:"workers"`
+	RenderSize   int `json:"render_size"`   // Square shorthand (sets both width and height)
+	RenderWidth  int `json:"render_width"`  // Output width (0 = use render_size)
+	RenderHeight int `json:"render_height"` // Output height (0 = use render_size)
+	Supersample  int `json:"supersample"`
+	WebPQuality  int `json:"webp_quality"`
+	Workers      int `json:"workers"`
 }
 
 // Load reads a JSON config file and returns Config.
@@ -99,6 +101,12 @@ func (c *Config) Resolve(flags Flags) {
 	// Defaults for render settings
 	if c.RenderSize <= 0 {
 		c.RenderSize = 256
+	}
+	if c.RenderWidth <= 0 {
+		c.RenderWidth = c.RenderSize
+	}
+	if c.RenderHeight <= 0 {
+		c.RenderHeight = c.RenderSize
 	}
 	if c.Supersample <= 0 {
 		c.Supersample = 2

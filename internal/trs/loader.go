@@ -57,10 +57,16 @@ func Load(bmdPath, customJSONPath, itemListXMLPath string) (Data, error) {
 
 // customTRSFile matches the JSON schema of custom_trs.json.
 type customTRSFile struct {
-	Presets  map[string]json.RawMessage `json:"presets"`
-	Sections map[string]json.RawMessage `json:"sections"`
-	Models   map[string]json.RawMessage `json:"models"`
-	Items    map[string]json.RawMessage `json:"items"`
+	Resolution map[string]resolutionEntry `json:"resolution"`
+	Presets    map[string]json.RawMessage `json:"presets"`
+	Sections   map[string]json.RawMessage `json:"sections"`
+	Models     map[string]json.RawMessage `json:"models"`
+	Items      map[string]json.RawMessage `json:"items"`
+}
+
+type resolutionEntry struct {
+	Width  int `json:"render_width"`
+	Height int `json:"render_height"`
 }
 
 type customTRSEntry struct {
@@ -88,6 +94,9 @@ type customTRSEntry struct {
 	ExcludeTextures  []string          `json:"exclude_textures"`
 	Tint             []float64         `json:"tint"`
 	TintTextures     []string          `json:"tint_textures"`
+	RenderWidth      *int              `json:"render_width"`
+	RenderHeight     *int              `json:"render_height"`
+	Resolution       *string           `json:"resolution"`
 	Merge            *bool             `json:"merge"`
 }
 
@@ -198,6 +207,12 @@ func makeEntry(c customTRSEntry) *Entry {
 	if len(c.TintTextures) > 0 {
 		e.TintTextures = c.TintTextures
 	}
+	if c.RenderWidth != nil {
+		e.RenderWidth = *c.RenderWidth
+	}
+	if c.RenderHeight != nil {
+		e.RenderHeight = *c.RenderHeight
+	}
 	return e
 }
 
@@ -273,11 +288,17 @@ func mergeEntryFields(existing *Entry, c customTRSEntry) {
 	if len(c.TintTextures) > 0 {
 		existing.TintTextures = c.TintTextures
 	}
+	if c.RenderWidth != nil {
+		existing.RenderWidth = *c.RenderWidth
+	}
+	if c.RenderHeight != nil {
+		existing.RenderHeight = *c.RenderHeight
+	}
 }
 
 // resolveEntry resolves a json.RawMessage that is either a preset name (string)
 // or an inline config object into a customTRSEntry.
-func resolveEntry(raw json.RawMessage, presets map[string]json.RawMessage) (*customTRSEntry, error) {
+func resolveEntry(raw json.RawMessage, presets map[string]json.RawMessage, resolutions map[string]resolutionEntry) (*customTRSEntry, error) {
 	// Try string first (preset reference)
 	var name string
 	if err := json.Unmarshal(raw, &name); err == nil {
@@ -290,6 +311,19 @@ func resolveEntry(raw json.RawMessage, presets map[string]json.RawMessage) (*cus
 	var c customTRSEntry
 	if err := json.Unmarshal(raw, &c); err != nil {
 		return nil, err
+	}
+	// Resolve render_preset: pull render_width/render_height from resolution group
+	if c.Resolution != nil {
+		if res, ok := resolutions[*c.Resolution]; ok {
+			if c.RenderWidth == nil && res.Width > 0 {
+				w := res.Width
+				c.RenderWidth = &w
+			}
+			if c.RenderHeight == nil && res.Height > 0 {
+				h := res.Height
+				c.RenderHeight = &h
+			}
+		}
 	}
 	return &c, nil
 }
@@ -318,7 +352,7 @@ func mergeCustomTRS(data Data, jsonPath, xmlPath string) {
 		if err != nil {
 			continue
 		}
-		c, err := resolveEntry(rawEntry, file.Presets)
+		c, err := resolveEntry(rawEntry, file.Presets, file.Resolution)
 		if err != nil {
 			continue
 		}
@@ -377,7 +411,7 @@ func mergeCustomTRS(data Data, jsonPath, xmlPath string) {
 		}
 
 		// Normal format: key=model filename, value=preset or inline config
-		c, err := resolveEntry(rawEntry, file.Presets)
+		c, err := resolveEntry(rawEntry, file.Presets, file.Resolution)
 		if err != nil {
 			continue
 		}
@@ -387,6 +421,29 @@ func mergeCustomTRS(data Data, jsonPath, xmlPath string) {
 				entryCopy := *entry
 				data[[2]int{item.Section, item.Index}] = &entryCopy
 			}
+		}
+	}
+
+	// Build section render dimensions map for inheritance
+	sectionRenderDims := make(map[int][2]int) // sec → [width, height]
+	for secStr, rawEntry := range file.Sections {
+		sec, err := strconv.Atoi(secStr)
+		if err != nil {
+			continue
+		}
+		c, err := resolveEntry(rawEntry, file.Presets, file.Resolution)
+		if err != nil {
+			continue
+		}
+		var w, h int
+		if c.RenderWidth != nil {
+			w = *c.RenderWidth
+		}
+		if c.RenderHeight != nil {
+			h = *c.RenderHeight
+		}
+		if w > 0 || h > 0 {
+			sectionRenderDims[sec] = [2]int{w, h}
 		}
 	}
 
@@ -411,12 +468,22 @@ func mergeCustomTRS(data Data, jsonPath, xmlPath string) {
 	})
 	for _, ie := range itemEntries {
 		keys := parseItemKeys(ie.keyStr)
-		c, err := resolveEntry(ie.raw, file.Presets)
+		c, err := resolveEntry(ie.raw, file.Presets, file.Resolution)
 		if err != nil {
 			continue
 		}
 		for _, key := range keys {
-			data[key] = makeEntry(*c)
+			entry := makeEntry(*c)
+			// Inherit render dimensions from section if not set by per-item config
+			if dims, ok := sectionRenderDims[key[0]]; ok {
+				if c.RenderWidth == nil && dims[0] > 0 {
+					entry.RenderWidth = dims[0]
+				}
+				if c.RenderHeight == nil && dims[1] > 0 {
+					entry.RenderHeight = dims[1]
+				}
+			}
+			data[key] = entry
 		}
 	}
 }

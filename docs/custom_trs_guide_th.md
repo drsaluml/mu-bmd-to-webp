@@ -229,7 +229,7 @@ display_angle = 0    → แนวนอน
 ```
 
 #### fill_ratio
-สัดส่วนที่ item กินพื้นที่ผ้าใบ 256x256
+สัดส่วนที่ item กินพื้นที่ผ้าใบ (เช่น 256x256 หรือขนาดสี่เหลี่ยมผืนผ้าที่กำหนดใน config)
 
 ```
 fill_ratio = 0.50  → item กิน 50% ของผ้าใบ (เล็ก)
@@ -611,6 +611,31 @@ fov = 90  → มุมกว้างมาก
 
 ---
 
+### สถานการณ์ 7: ปีกที่ต้องการภาพสี่เหลี่ยมผืนผ้า
+
+**ปัญหา**: ปีกกางแนวนอนกว้างกว่าสูง → ภาพจตุรัส 256x256 เสียพื้นที่ด้านบน/ล่าง
+**แก้ไข**: ใช้ `render_width`/`render_height` กำหนดขนาดเฉพาะ section หรือ per-item
+
+```json
+"presets": {
+  "wing-wide": {
+    "camera": "fallback", "display_angle": -90, "bones": true,
+    "render_width": 384, "render_height": 256
+  }
+},
+"sections": {
+  "14": { "render_width": 384, "render_height": 256, "merge": true }
+},
+"items": {
+  "14_36-49": "wing-wide"
+}
+```
+- `render_width: 384, render_height: 256` = ภาพแนวนอน 3:2
+- กำหนดได้ทั้งระดับ section, preset, models, และ per-item
+- ถ้าไม่ระบุ → ใช้ค่าจาก config.json (`render_size` หรือ `render_width`/`render_height`)
+
+---
+
 ## สรุปตัวแปร (Quick Reference)
 
 | ตัวแปร | ชนิด | ค่าเริ่มต้น | ใช้ใน | คำอธิบายสั้น |
@@ -629,5 +654,7 @@ fov = 90  → มุมกว้างมาก
 | `perspective` | bool | false | ทุกที่ | เปิด perspective projection |
 | `fov` | float | 75 | ทุกที่ | มุมมอง (ใช้กับ perspective) |
 | `keep_all_meshes` | bool | false | ทุกที่ | ข้าม effect mesh filter |
+| `render_width` | int | 0 | ทุกที่ | ขนาดกว้างภาพ output (0 = ใช้ config.json) |
+| `render_height` | int | 0 | ทุกที่ | ขนาดสูงภาพ output (0 = ใช้ config.json) |
 | `override` | bool | false | sections | แทนที่ binary TRS ทั้ง section |
 | `merge` | bool | false | sections | merge ค่าเข้า binary TRS |

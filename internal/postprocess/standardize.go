@@ -2,7 +2,6 @@ package postprocess
 
 import (
 	"image"
-	"image/color"
 	"math"
 
 	"mu-bmd-renderer/internal/mathutil"
@@ -12,13 +11,13 @@ import (
 
 // CropAndCenter crops to the bounding box of non-transparent pixels, then scales and centers.
 // Used when PCA standardization is disabled (standardize: false).
-func CropAndCenter(img *image.NRGBA, size int, fillRatio float64) *image.NRGBA {
+func CropAndCenter(img *image.NRGBA, canvasW, canvasH int, fillRatio float64) *image.NRGBA {
 	cropped := cropAlpha(img)
-	return scaleAndCenter(cropped, size, fillRatio)
+	return scaleAndCenter(cropped, canvasW, canvasH, fillRatio)
 }
 
 // StandardizeImage rotates, scales, and centers the item image using PCA alignment.
-func StandardizeImage(img *image.NRGBA, size int, targetAngleDeg, fillRatio float64, forceFlip bool) *image.NRGBA {
+func StandardizeImage(img *image.NRGBA, canvasW, canvasH int, targetAngleDeg, fillRatio float64, forceFlip bool) *image.NRGBA {
 	b := img.Bounds()
 	w, h := b.Dx(), b.Dy()
 
@@ -96,7 +95,7 @@ func StandardizeImage(img *image.NRGBA, size int, targetAngleDeg, fillRatio floa
 	cropped := cropAlpha(rotated)
 
 	// Scale to fill_ratio of canvas and center
-	return scaleAndCenter(cropped, size, fillRatio)
+	return scaleAndCenter(cropped, canvasW, canvasH, fillRatio)
 }
 
 // detectFlipRotated checks orientation on the already-rotated image.
@@ -268,6 +267,7 @@ func samplePix(img *image.NRGBA, x, y int) [4]float64 {
 	}
 }
 
+
 func lerp4(v00, v10, v01, v11, fx, fy float64) float64 {
 	return v00*(1-fx)*(1-fy) + v10*fx*(1-fy) + v01*(1-fx)*fy + v11*fx*fy
 }
@@ -326,16 +326,20 @@ func cropAlpha(img *image.NRGBA) *image.NRGBA {
 	return cropped
 }
 
-func scaleAndCenter(img *image.NRGBA, canvasSize int, fillRatio float64) *image.NRGBA {
+func scaleAndCenter(img *image.NRGBA, canvasW, canvasH int, fillRatio float64) *image.NRGBA {
 	b := img.Bounds()
 	srcW, srcH := b.Dx(), b.Dy()
 	if srcW == 0 || srcH == 0 {
-		return image.NewNRGBA(image.Rect(0, 0, canvasSize, canvasSize))
+		return image.NewNRGBA(image.Rect(0, 0, canvasW, canvasH))
 	}
 
-	// Scale to fit within fillRatio of canvas
-	maxDim := float64(canvasSize) * fillRatio
-	scaleF := maxDim / math.Max(float64(srcW), float64(srcH))
+	// Scale to fit within fillRatio of canvas (constrained by both axes)
+	scaleX := float64(canvasW) * fillRatio / float64(srcW)
+	scaleY := float64(canvasH) * fillRatio / float64(srcH)
+	scaleF := scaleX
+	if scaleY < scaleF {
+		scaleF = scaleY
+	}
 	newW := int(float64(srcW)*scaleF + 0.5)
 	newH := int(float64(srcH)*scaleF + 0.5)
 	if newW < 1 {
@@ -350,16 +354,16 @@ func scaleAndCenter(img *image.NRGBA, canvasSize int, fillRatio float64) *image.
 	draw.CatmullRom.Scale(scaled, scaled.Bounds(), img, img.Bounds(), draw.Src, nil)
 
 	// Center on canvas
-	canvas := image.NewNRGBA(image.Rect(0, 0, canvasSize, canvasSize))
-	offX := (canvasSize - newW) / 2
-	offY := (canvasSize - newH) / 2
+	canvas := image.NewNRGBA(image.Rect(0, 0, canvasW, canvasH))
+	offX := (canvasW - newW) / 2
+	offY := (canvasH - newH) / 2
 	for y := 0; y < newH; y++ {
 		srcOff := y * scaled.Stride
 		dstOff := (offY+y)*canvas.Stride + offX*4
-		if offY+y >= 0 && offY+y < canvasSize {
+		if offY+y >= 0 && offY+y < canvasH {
 			copyLen := newW * 4
-			if offX+newW > canvasSize {
-				copyLen = (canvasSize - offX) * 4
+			if offX+newW > canvasW {
+				copyLen = (canvasW - offX) * 4
 			}
 			if offX >= 0 && copyLen > 0 {
 				copy(canvas.Pix[dstOff:dstOff+copyLen], scaled.Pix[srcOff:srcOff+copyLen])
@@ -367,30 +371,32 @@ func scaleAndCenter(img *image.NRGBA, canvasSize int, fillRatio float64) *image.
 		}
 	}
 
-	// Set background to transparent (already zeroed)
-	_ = color.NRGBA{}
 	return canvas
 }
 
 // TrimToContent crops transparent borders and scales the content to fill the
 // canvas with only a small pixel padding. This is the final post-processing
 // step ensuring items use the full canvas area.
-func TrimToContent(img *image.NRGBA, size int, padding int) *image.NRGBA {
+func TrimToContent(img *image.NRGBA, canvasW, canvasH int, padding int) *image.NRGBA {
 	cropped := cropAlpha(img)
 	b := cropped.Bounds()
 	if b.Dx() == 0 || b.Dy() == 0 {
 		return img
 	}
 	// If content already fills most of the canvas, skip
+	minCanvas := canvasW
+	if canvasH < minCanvas {
+		minCanvas = canvasH
+	}
 	maxDim := b.Dx()
 	if b.Dy() > maxDim {
 		maxDim = b.Dy()
 	}
-	if maxDim >= size-2*padding {
+	if maxDim >= minCanvas-2*padding {
 		return img
 	}
-	fillRatio := float64(size-2*padding) / float64(size)
-	return scaleAndCenter(cropped, size, fillRatio)
+	fillRatio := float64(minCanvas-2*padding) / float64(minCanvas)
+	return scaleAndCenter(cropped, canvasW, canvasH, fillRatio)
 }
 
 // FlipHorizontal mirrors an image left-to-right.

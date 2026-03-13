@@ -112,7 +112,8 @@ func RasterizeTriangle(
 	shade := lc.Ambient + hemiLight + ndlMain*lc.Direct + ndlRim*lc.Rim + spec
 
 	// Bounding box
-	size := fb.Width
+	w := fb.Width
+	h := fb.Height
 	minX := int(math.Min(math.Min(x0, x1), x2))
 	maxX := int(math.Max(math.Max(x0, x1), x2)) + 1
 	minY := int(math.Min(math.Min(y0, y1), y2))
@@ -121,14 +122,14 @@ func RasterizeTriangle(
 	if minX < 0 {
 		minX = 0
 	}
-	if maxX >= size {
-		maxX = size - 1
+	if maxX >= w {
+		maxX = w - 1
 	}
 	if minY < 0 {
 		minY = 0
 	}
-	if maxY >= size {
-		maxY = size - 1
+	if maxY >= h {
+		maxY = h - 1
 	}
 	if minX >= maxX || minY >= maxY {
 		return
@@ -156,7 +157,7 @@ func RasterizeTriangle(
 	// Pixel loop — zero allocations
 	for sy := minY; sy <= maxY; sy++ {
 		dsy := float64(sy) - y2
-		rowOff := sy * size
+		rowOff := sy * w
 		for sx := minX; sx <= maxX; sx++ {
 			dsx := float64(sx) - x2
 			w0 := (dy12*dsx + dx21*dsy) * invDet
@@ -284,7 +285,8 @@ func RasterizeTriangleAdditive(
 	spec := math.Pow(ndh, lc.SpecPow) * lc.SpecInt
 	shade := lc.Ambient + hemiLight + ndlMain*lc.Direct + ndlRim*lc.Rim + spec
 
-	size := fb.Width
+	w := fb.Width
+	h := fb.Height
 	minX := int(math.Min(math.Min(x0, x1), x2))
 	maxX := int(math.Max(math.Max(x0, x1), x2)) + 1
 	minY := int(math.Min(math.Min(y0, y1), y2))
@@ -293,14 +295,14 @@ func RasterizeTriangleAdditive(
 	if minX < 0 {
 		minX = 0
 	}
-	if maxX >= size {
-		maxX = size - 1
+	if maxX >= w {
+		maxX = w - 1
 	}
 	if minY < 0 {
 		minY = 0
 	}
-	if maxY >= size {
-		maxY = size - 1
+	if maxY >= h {
+		maxY = h - 1
 	}
 	if minX >= maxX || minY >= maxY {
 		return
@@ -324,7 +326,7 @@ func RasterizeTriangleAdditive(
 
 	for sy := minY; sy <= maxY; sy++ {
 		dsy := float64(sy) - y2
-		rowOff := sy * size
+		rowOff := sy * w
 		for sx := minX; sx <= maxX; sx++ {
 			dsx := float64(sx) - x2
 			w0 := (dy12*dsx + dx21*dsy) * invDet
@@ -463,7 +465,8 @@ func RasterizeTriangleAdditiveOverlay(
 	spec := math.Pow(ndh, lc.SpecPow) * lc.SpecInt
 	shade := lc.Ambient + hemiLight + ndlMain*lc.Direct + ndlRim*lc.Rim + spec
 
-	size := fb.Width
+	w := fb.Width
+	h := fb.Height
 	minX := int(math.Min(math.Min(x0, x1), x2))
 	maxX := int(math.Max(math.Max(x0, x1), x2)) + 1
 	minY := int(math.Min(math.Min(y0, y1), y2))
@@ -472,14 +475,14 @@ func RasterizeTriangleAdditiveOverlay(
 	if minX < 0 {
 		minX = 0
 	}
-	if maxX >= size {
-		maxX = size - 1
+	if maxX >= w {
+		maxX = w - 1
 	}
 	if minY < 0 {
 		minY = 0
 	}
-	if maxY >= size {
-		maxY = size - 1
+	if maxY >= h {
+		maxY = h - 1
 	}
 	if minX >= maxX || minY >= maxY {
 		return
@@ -503,7 +506,7 @@ func RasterizeTriangleAdditiveOverlay(
 
 	for sy := minY; sy <= maxY; sy++ {
 		dsy := float64(sy) - y2
-		rowOff := sy * size
+		rowOff := sy * w
 		for sx := minX; sx <= maxX; sx++ {
 			dsx := float64(sx) - x2
 			w0 := (dy12*dsx + dx21*dsy) * invDet
@@ -630,7 +633,8 @@ func RasterizeTriangleAlphaBlend(
 	exposure := lc.Exposure
 	invGamma := lc.InvGamma
 
-	size := fb.Width
+	w := fb.Width
+	h := fb.Height
 
 	minX := int(math.Floor(math.Min(x0, math.Min(x1, x2))))
 	maxX := int(math.Ceil(math.Max(x0, math.Max(x1, x2))))
@@ -638,9 +642,9 @@ func RasterizeTriangleAlphaBlend(
 	maxY := int(math.Ceil(math.Max(y0, math.Max(y1, y2))))
 
 	if minX < 0 { minX = 0 }
-	if maxX >= size { maxX = size - 1 }
+	if maxX >= w { maxX = w - 1 }
 	if minY < 0 { minY = 0 }
-	if maxY >= size { maxY = size - 1 }
+	if maxY >= h { maxY = h - 1 }
 
 	dx21 := x2 - x1; dy12 := y1 - y2
 	dx02 := x0 - x2; dy20 := y2 - y0
@@ -652,7 +656,7 @@ func RasterizeTriangleAlphaBlend(
 
 	for sy := minY; sy <= maxY; sy++ {
 		dsy := float64(sy) - y2
-		rowOff := sy * size
+		rowOff := sy * w
 		for sx := minX; sx <= maxX; sx++ {
 			dsx := float64(sx) - x2
 			w0 := (dy12*dsx + dx21*dsy) * invDet

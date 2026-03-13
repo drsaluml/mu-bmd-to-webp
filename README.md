@@ -1,7 +1,7 @@
 # MU Online BMD 3D Renderer
 
 A CLI tool for converting MU Online's BMD (Binary Model Data) 3D model files
-into transparent 256x256 WebP images for web display.
+into transparent WebP images (default 256x256, supports rectangular output) for web display.
 
 Written in Pure Go (no CGo) — supports cross-compilation.
 
@@ -45,32 +45,34 @@ make build
 
 ## Usage
 
-### Render all items
+### Using `go run` (no build needed)
 
 ```bash
-./mu-bmd-renderer
+cd mu-bmd-renderer
+
+# Render all items (~22 sec, goroutine workers)
+go run ./cmd/render -config config.json
+
+# Render first N items for testing
+go run ./cmd/render -config config.json -test 20
+
+# Render a specific section
+go run ./cmd/render -config config.json -section 0
+
+# Render a single item (section 0, index 3 = Katana)
+go run ./cmd/render -config config.json -section 0 -index 3
+
+# Custom worker count
+go run ./cmd/render -config config.json -workers 8
 ```
 
-### Render for testing (first N items)
+### Using binary (build first)
 
 ```bash
-./mu-bmd-renderer -test 20
-```
-
-### Render a specific section
-
-```bash
-# All items in section 0 (Swords)
-./mu-bmd-renderer -section 0
-
-# Only Katana (section 0, index 3)
-./mu-bmd-renderer -section 0 -index 3
-```
-
-### Use a config file
-
-```bash
+make build
 ./mu-bmd-renderer -config config.json
+./mu-bmd-renderer -test 20
+./mu-bmd-renderer -section 0 -index 3
 ```
 
 ### Decode item.bmd to ItemList.xml
@@ -118,6 +120,8 @@ Create a `config.json` file to set paths and render options:
   "custom_trs_json": "custom_trs.json",
   "output_dir": "Data/Item-renders",
   "render_size": 256,
+  "render_width": 0,
+  "render_height": 0,
   "supersample": 2,
   "webp_quality": 90,
   "workers": 0
@@ -132,8 +136,10 @@ Create a `config.json` file to set paths and render options:
 | `trs_bmd` | Path to itemtrsdata.bmd (rotation/scale data) |
 | `custom_trs_json` | Path to custom_trs.json (custom angle overrides) |
 | `output_dir` | Output directory for rendered images |
-| `render_size` | Output image size (pixels) |
-| `supersample` | Supersampling multiplier (2 = render at 512 then downscale to 256) |
+| `render_size` | Output image size in pixels (square shorthand, sets both width and height) |
+| `render_width` | Output image width in pixels (0 = use `render_size`) |
+| `render_height` | Output image height in pixels (0 = use `render_size`) |
+| `supersample` | Supersampling multiplier (2 = render at 2x then downscale) |
 | `webp_quality` | WebP quality (1-100) |
 | `workers` | Number of workers (0 = use all CPUs) |
 
@@ -259,9 +265,14 @@ Use `{section}_{start}-{end}` to apply the same config to a range of items:
 | `keep_all_meshes` | bool | Skip effect mesh filtering |
 | `mirror_pair` | bool | Render one side then duplicate+mirror to create a pair |
 | `additive_textures` | string[] | Force these texture stems to additive under-composite blending |
+| `additive_on_top` | bool | Use additive on top (Pass 3b) instead of under-composite (Pass 4) for additive_textures |
+| `additive_floor` | int | luminanceAlpha floor for force-additive pass (default: 40) |
 | `exclude_textures` | string[] | Exclude meshes with these texture stems |
+| `bone_flip` | bool | Prefix root bone matrices with Rx(-90°) for models with non-standard bone hierarchy |
 | `tint` | [R,G,B] | RGB color multiplier (e.g. `[1, 0.3, 0.3]` for red tint) |
 | `tint_textures` | string[] | Apply tint only to matching texture stems |
+| `render_width` | int | Per-item output width override (0 = use global config) |
+| `render_height` | int | Per-item output height override (0 = use global config) |
 
 Item keys use the format `{section}_{index}`, e.g. `"1_4"` = section 1, index 4.
 
@@ -312,9 +323,9 @@ make deps         # Download dependencies
 
 | | Python | Go |
 |---|---|---|
-| Total time (4800 items) | ~47 min | ~22 sec |
+| Total time (4812 items) | ~47 min | ~22 sec |
 | Speed | ~1.7 items/sec | ~220 items/sec |
-| Success rate | 98.1% | 99.4% |
+| Success rate | 98.1% | 99.5% |
 | Processing | Sequential | Parallel (goroutine pool) |
 
 Approximately **130x faster** than Python.

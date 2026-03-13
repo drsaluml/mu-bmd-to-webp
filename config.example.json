@@ -6,6 +6,8 @@
   "custom_trs_json": "custom_trs.json",
   "output_dir": "Data/Item-renders",
   "render_size": 256,
+  "render_width": 0,
+  "render_height": 0,
   "supersample": 2,
   "webp_quality": 90,
   "workers": 0

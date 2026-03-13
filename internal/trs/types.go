@@ -27,6 +27,8 @@ type Entry struct {
 	ExcludeTextures  []string          // exclude meshes with these texture stems from rendering
 	Tint             [3]float64        // RGB color multiplier (0=unused, e.g. [1,0.3,0.3]=red tint)
 	TintTextures     []string          // apply tint only to these texture stems (empty = all meshes)
+	RenderWidth      int               // per-item output width override (0 = use global config)
+	RenderHeight     int               // per-item output height override (0 = use global config)
 }
 
 // Data maps (section, index) to an Entry.

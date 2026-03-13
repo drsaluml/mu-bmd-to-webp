@@ -21,7 +21,7 @@ func RenderBMD(
 	bones []bmd.Bone,
 	entry *trs.Entry,
 	texResolver texture.Resolver,
-	size int,
+	width, height int,
 	supersample int,
 ) *image.NRGBA {
 	// Pre-filter effect meshes and body meshes on raw geometry (before bone transforms distort shapes)
@@ -76,10 +76,11 @@ func RenderBMD(
 	// Compute view matrix + filter components
 	R, bodyMeshes := viewmatrix.ComputeViewMatrix(meshes, entry)
 	if len(bodyMeshes) == 0 {
-		return image.NewNRGBA(image.Rect(0, 0, size, size))
+		return image.NewNRGBA(image.Rect(0, 0, width, height))
 	}
 
-	renderSize := size * supersample
+	renderW := width * supersample
+	renderH := height * supersample
 
 	// Compute bounding box of all transformed vertices
 	var allMin, allMax [3]float64
@@ -106,26 +107,38 @@ func RenderBMD(
 	}
 	spanX := allMax[0] - allMin[0]
 	spanY := allMax[1] - allMin[1]
-	span := spanX
-	if spanY > span {
-		span = spanY
+	if spanX < 0.001 {
+		spanX = 0.001
 	}
-	if span < 0.001 {
-		span = 0.001
+	if spanY < 0.001 {
+		spanY = 0.001
 	}
 
-	margin := 16 * supersample
-	scale := float64(renderSize-2*margin) / span
+	// Margin as ~6.25% of smallest canvas dimension (matches 16px at 256px default)
+	minDim := renderW
+	if renderH < minDim {
+		minDim = renderH
+	}
+	margin := minDim * 16 / 256
+	if margin < 4 {
+		margin = 4
+	}
+	scaleX := float64(renderW-2*margin) / spanX
+	scaleY := float64(renderH-2*margin) / spanY
+	scale := scaleX
+	if scaleY < scale {
+		scale = scaleY
+	}
 
 	// Positioned camera: when cam_height is set, use parallax perspective
 	// that makes depth-axis geometry visible (e.g. fabric hanging down).
 	var posCamera *viewmatrix.PosCamera
 	if entry != nil && entry.CamHeight != 0 {
-		posCamera = viewmatrix.SetupPosCamera(bodyMeshes, R, entry, renderSize, margin)
+		posCamera = viewmatrix.SetupPosCamera(bodyMeshes, R, entry, renderW, renderH, margin)
 	}
 
 	// Allocate framebuffer
-	fb := NewFrameBuffer(renderSize, renderSize)
+	fb := NewFrameBuffer(renderW, renderH)
 	lc := DefaultLightConfig()
 	if entry != nil && entry.AdditiveFloor > 0 {
 		lc.AdditiveDarkFloor = float64(entry.AdditiveFloor)
@@ -187,7 +200,7 @@ func RenderBMD(
 	meshBounds := make([]meshBBox, len(opaqueMeshes))
 	for i, mesh := range opaqueMeshes {
 		bb := meshBBox{math.Inf(1), math.Inf(1), math.Inf(-1), math.Inf(-1)}
-		px, py, _ := viewmatrix.ProjectVertices(mesh.Verts, R, center, scale, renderSize, entry, posCamera)
+		px, py, _ := viewmatrix.ProjectVertices(mesh.Verts, R, center, scale, renderW, renderH, entry, posCamera)
 		for j := range px {
 			if px[j] < bb.minX { bb.minX = px[j] }
 			if px[j] > bb.maxX { bb.maxX = px[j] }
@@ -220,20 +233,20 @@ func RenderBMD(
 		if contained {
 			// Surface decoration: render as opaque but skip z-test by using
 			// a large z-bias that guarantees it passes the depth test.
-			rasterizeMeshWithZBias(fb, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendOpaque, posCamera, 1e6)
+			rasterizeMeshWithZBias(fb, &mesh, R, center, scale, renderW, renderH, entry, texResolver, &lc, blendOpaque, posCamera, 1e6)
 		} else {
-			rasterizeMesh(fb, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendOpaque, posCamera)
+			rasterizeMesh(fb, &mesh, R, center, scale, renderW, renderH, entry, texResolver, &lc, blendOpaque, posCamera)
 		}
 	}
 
 	// Pass 2: Alpha-blend meshes (z-read but no z-write, alpha composite)
 	for _, mesh := range alphaBlendMeshes {
-		rasterizeMesh(fb, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendAlpha, posCamera)
+		rasterizeMesh(fb, &mesh, R, center, scale, renderW, renderH, entry, texResolver, &lc, blendAlpha, posCamera)
 	}
 
 	// Pass 3: Additive meshes (no z-buffer, add colors on top)
 	for _, mesh := range additiveMeshes {
-		rasterizeMesh(fb, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendAdditive, posCamera)
+		rasterizeMesh(fb, &mesh, R, center, scale, renderW, renderH, entry, texResolver, &lc, blendAdditive, posCamera)
 	}
 
 	// Pass 3b: Overlay-additive meshes — rendered to a separate framebuffer,
@@ -241,15 +254,15 @@ func RenderBMD(
 	// This shows bright energy/glow effects while hiding dark flat panels that would
 	// otherwise create a "black aura" on the background.
 	if len(overlayAdditiveMeshes) > 0 {
-		olFB := NewFrameBuffer(renderSize, renderSize)
+		olFB := NewFrameBuffer(renderW, renderH)
 		for _, mesh := range overlayAdditiveMeshes {
-			rasterizeMesh(olFB, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, blendOpaque, posCamera)
+			rasterizeMesh(olFB, &mesh, R, center, scale, renderW, renderH, entry, texResolver, &lc, blendOpaque, posCamera)
 		}
 		olFloor := 40
 		if entry != nil && entry.AdditiveFloor > 0 {
 			olFloor = entry.AdditiveFloor
 		}
-		luminanceAlphaWithFloor(olFB, renderSize, olFloor)
+		luminanceAlphaWithFloor(olFB, olFloor)
 		compositeOver(fb, olFB)
 	}
 
@@ -258,7 +271,7 @@ func RenderBMD(
 	// The body mesh stays at full brightness; the overlay only shows
 	// through transparent areas where the body doesn't cover.
 	if len(forceAdditiveMeshes) > 0 {
-		bgFB := NewFrameBuffer(renderSize, renderSize)
+		bgFB := NewFrameBuffer(renderW, renderH)
 		floor := 40
 		if entry != nil && entry.AdditiveFloor > 0 {
 			floor = entry.AdditiveFloor
@@ -270,7 +283,7 @@ func RenderBMD(
 			bgBlend = blendOpaqueUnlit
 		}
 		for _, mesh := range forceAdditiveMeshes {
-			rasterizeMesh(bgFB, &mesh, R, center, scale, renderSize, entry, texResolver, &lc, bgBlend, posCamera)
+			rasterizeMesh(bgFB, &mesh, R, center, scale, renderW, renderH, entry, texResolver, &lc, bgBlend, posCamera)
 		}
 		// Convert opaque-rendered pixels to luminance-based alpha.
 		// Dark pixels → low alpha (nearly transparent), bright pixels → high alpha.
@@ -278,14 +291,14 @@ func RenderBMD(
 		// When additive_floor is very low (≤1), skip dark removal entirely — render
 		// the mesh and composite under as-is (for gradient aura meshes).
 		if floor > 1 {
-			luminanceAlphaWithFloor(bgFB, renderSize, floor)
-			removeBackgroundDark(bgFB, renderSize, floor)
+			luminanceAlphaWithFloor(bgFB, floor)
+			removeBackgroundDark(bgFB, floor)
 		}
 		compositeUnder(fb, bgFB)
 	}
 
 	// Convert framebuffer to image
-	img := image.NewNRGBA(image.Rect(0, 0, renderSize, renderSize))
+	img := image.NewNRGBA(image.Rect(0, 0, renderW, renderH))
 	copy(img.Pix, fb.Color)
 
 	return img
@@ -615,14 +628,14 @@ func isContainedOverlay(meshes []bmd.Mesh, idx int) bool {
 // of JPG body meshes sharing the same geometry surface.
 func rasterizeMeshWithZBias(
 	fb *FrameBuffer, mesh *bmd.Mesh,
-	R mathutil.Mat3, center [3]float64, scale float64, renderSize int,
+	R mathutil.Mat3, center [3]float64, scale float64, renderW, renderH int,
 	entry *trs.Entry, texResolver texture.Resolver, lc *LightConfig,
 	blendMode int, posCamera *viewmatrix.PosCamera, zBias float64,
 ) {
 	if len(mesh.Verts) == 0 {
 		return
 	}
-	px, py, pz := viewmatrix.ProjectVertices(mesh.Verts, R, center, scale, renderSize, entry, posCamera)
+	px, py, pz := viewmatrix.ProjectVertices(mesh.Verts, R, center, scale, renderW, renderH, entry, posCamera)
 	for i := range pz {
 		pz[i] += zBias
 	}
@@ -631,14 +644,14 @@ func rasterizeMeshWithZBias(
 
 func rasterizeMesh(
 	fb *FrameBuffer, mesh *bmd.Mesh,
-	R mathutil.Mat3, center [3]float64, scale float64, renderSize int,
+	R mathutil.Mat3, center [3]float64, scale float64, renderW, renderH int,
 	entry *trs.Entry, texResolver texture.Resolver, lc *LightConfig,
 	blendMode int, posCamera *viewmatrix.PosCamera,
 ) {
 	if len(mesh.Verts) == 0 {
 		return
 	}
-	px, py, pz := viewmatrix.ProjectVertices(mesh.Verts, R, center, scale, renderSize, entry, posCamera)
+	px, py, pz := viewmatrix.ProjectVertices(mesh.Verts, R, center, scale, renderW, renderH, entry, posCamera)
 	rasterizeMeshInner(fb, mesh, px, py, pz, entry, texResolver, lc, blendMode)
 }
 
@@ -963,13 +976,9 @@ func compositeUnder(dst, bg *FrameBuffer) {
 // Uses max channel with a floor threshold: pixels below the floor become
 // transparent, pixels above ramp up to full opacity. This cleanly separates
 // dark effect backgrounds (fire/energy on black) from actual glow content.
-func luminanceAlpha(fb *FrameBuffer, size int) {
-	luminanceAlphaWithFloor(fb, size, 40)
-}
-
-func luminanceAlphaWithFloor(fb *FrameBuffer, size int, floor int) {
+func luminanceAlphaWithFloor(fb *FrameBuffer, floor int) {
 	scale := 255.0 / (255.0 - float64(floor))
-	n := size * size * 4
+	n := fb.Width * fb.Height * 4
 	for i := 0; i < n; i += 4 {
 		if fb.Color[i+3] == 0 {
 			continue
@@ -994,13 +1003,14 @@ func luminanceAlphaWithFloor(fb *FrameBuffer, size int, floor int) {
 	}
 }
 
-func removeBackgroundDark(fb *FrameBuffer, size int, threshold int) {
-	n := size * size
+func removeBackgroundDark(fb *FrameBuffer, threshold int) {
+	w, h := fb.Width, fb.Height
+	n := w * h
 	visited := make([]bool, n)
 
 	// isDark checks if pixel at (x,y) is transparent or dark (brightness < threshold).
 	isDark := func(x, y int) bool {
-		i := (y*size + x) * 4
+		i := (y*w + x) * 4
 		if fb.Color[i+3] == 0 {
 			return true // transparent = background
 		}
@@ -1009,19 +1019,19 @@ func removeBackgroundDark(fb *FrameBuffer, size int, threshold int) {
 	}
 
 	// BFS flood-fill from all border dark pixels
-	queue := make([]int32, 0, size*4)
-	for x := 0; x < size; x++ {
-		for _, y := range []int{0, size - 1} {
-			idx := y*size + x
+	queue := make([]int32, 0, (w+h)*2)
+	for x := 0; x < w; x++ {
+		for _, y := range []int{0, h - 1} {
+			idx := y*w + x
 			if !visited[idx] && isDark(x, y) {
 				visited[idx] = true
 				queue = append(queue, int32(idx))
 			}
 		}
 	}
-	for y := 1; y < size-1; y++ {
-		for _, x := range []int{0, size - 1} {
-			idx := y*size + x
+	for y := 1; y < h-1; y++ {
+		for _, x := range []int{0, w - 1} {
+			idx := y*w + x
 			if !visited[idx] && isDark(x, y) {
 				visited[idx] = true
 				queue = append(queue, int32(idx))
@@ -1034,13 +1044,13 @@ func removeBackgroundDark(fb *FrameBuffer, size int, threshold int) {
 	for len(queue) > 0 {
 		cur := queue[0]
 		queue = queue[1:]
-		cx, cy := int(cur)%size, int(cur)/size
+		cx, cy := int(cur)%w, int(cur)/w
 		for d := 0; d < 4; d++ {
 			nx, ny := cx+dx[d], cy+dy[d]
-			if nx < 0 || nx >= size || ny < 0 || ny >= size {
+			if nx < 0 || nx >= w || ny < 0 || ny >= h {
 				continue
 			}
-			nIdx := ny*size + nx
+			nIdx := ny*w + nx
 			if visited[nIdx] {
 				continue
 			}
@@ -1059,19 +1069,16 @@ func removeBackgroundDark(fb *FrameBuffer, size int, threshold int) {
 	}
 
 	// Edge erosion: iteratively fade dark pixels at the content boundary.
-	// Uses a higher threshold (2× flood-fill) to catch the gradient fringe
-	// from JPG textures. Alpha is scaled by brightness/edgeThreshold so
-	// darker edge pixels become more transparent (smooth fade-out).
-	edgeThreshold := threshold * 2 // e.g. 120 for threshold=60
+	edgeThreshold := threshold * 2
 	for pass := 0; pass < 3; pass++ {
 		type fadePixel struct {
 			idx      int
 			newAlpha uint8
 		}
 		var toFade []fadePixel
-		for y := 0; y < size; y++ {
-			for x := 0; x < size; x++ {
-				i := (y*size + x) * 4
+		for y := 0; y < h; y++ {
+			for x := 0; x < w; x++ {
+				i := (y*w + x) * 4
 				if fb.Color[i+3] == 0 {
 					continue
 				}
@@ -1080,21 +1087,19 @@ func removeBackgroundDark(fb *FrameBuffer, size int, threshold int) {
 				if bright >= edgeThreshold {
 					continue
 				}
-				// Check 4-neighbors for transparent pixel
 				touchesEdge := false
 				for d := 0; d < 4; d++ {
 					nx, ny := x+dx[d], y+dy[d]
-					if nx < 0 || nx >= size || ny < 0 || ny >= size {
+					if nx < 0 || nx >= w || ny < 0 || ny >= h {
 						touchesEdge = true
 						break
 					}
-					if fb.Color[(ny*size+nx)*4+3] == 0 {
+					if fb.Color[(ny*w+nx)*4+3] == 0 {
 						touchesEdge = true
 						break
 					}
 				}
 				if touchesEdge {
-					// Scale alpha: brightness 0 → alpha 0, brightness=edgeThreshold → keep
 					newA := uint8(int(fb.Color[i+3]) * bright / edgeThreshold)
 					toFade = append(toFade, fadePixel{i, newA})
 				}
